@@ -1,11 +1,16 @@
 // index.js (racine)
 const { Client, Collection, GatewayIntentBits, Partials } = require("discord.js");
+
 const { loadEnv } = require("./src/utils/env");
 const logger = require("./src/utils/logger");
 
 const { loadEvents } = require("./src/handlers/eventHandler");
 const { loadSlashCommands, loadPrefixCommands } = require("./src/handlers/commandHandler");
 
+// Registry DB sync
+const { syncRegistryAll } = require("./handlers/registrySync");
+
+// Load env
 loadEnv();
 
 // --- Sécurité env ---
@@ -14,7 +19,7 @@ if (!process.env.DISCORD_TOKEN) {
   process.exit(1);
 }
 
-// --- Intents : version "full" ---
+// --- Client Discord ---
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -51,28 +56,43 @@ const client = new Client({
   ],
 });
 
-// Collections
+// --- Collections ---
 client.commands = new Collection();
 client.prefixGlobal = new Collection();
 client.prefixDev = new Collection();
 
-// Interactions (buttons/modals/select/autocomplete)
+// --- Load interactions (buttons / modals / selects / autocomplete) ---
 const loadInteractions = require("./handlers/loadInteractions");
 loadInteractions(client);
 
-// Crash safety
-process.on("unhandledRejection", (err) => logger.error(`UNHANDLED REJECTION: ${err?.stack || err}`));
-process.on("uncaughtException", (err) => logger.error(`UNCAUGHT EXCEPTION: ${err?.stack || err}`));
+// --- Crash safety ---
+process.on("unhandledRejection", (err) =>
+  logger.error(`UNHANDLED REJECTION: ${err?.stack || err}`)
+);
+process.on("uncaughtException", (err) =>
+  logger.error(`UNCAUGHT EXCEPTION: ${err?.stack || err}`)
+);
 
+// --- Bootstrap ---
 (async () => {
   try {
+    // Loaders
     await loadSlashCommands(client);
     await loadPrefixCommands(client);
     await loadEvents(client);
 
+    // Registry DB (slash / buttons / modals / selects / autocomplete)
+    try {
+      await syncRegistryAll();
+      logger.info("Registry DB synchronisé");
+    } catch (err) {
+      logger.warn(`Registry DB ignoré (DB pas prête ?) : ${err?.message || err}`);
+    }
+
+    // Login
     await client.login(process.env.DISCORD_TOKEN);
   } catch (err) {
-    logger.error(`Erreur au démarrage: ${err?.stack || err}`);
+    logger.error(`Erreur critique au démarrage: ${err?.stack || err}`);
     process.exit(1);
   }
 })();

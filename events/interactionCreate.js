@@ -1,89 +1,65 @@
-// index.js (racine)
-const { Client, Collection, GatewayIntentBits, Partials } = require("discord.js");
-const { loadEnv } = require("./src/utils/env");
-const logger = require("./src/utils/logger");
+// events/interactionCreate.js
+const logger = require("../src/utils/logger");
 
-const { loadEvents } = require("./src/handlers/eventHandler");
-const { loadSlashCommands, loadPrefixCommands } = require("./src/handlers/commandHandler");
+const handleButton = require("../handlers/buttonHandler");
+const handleModal = require("../handlers/modalHandler");
+const handleSelect = require("../handlers/selectMenuHandler");
+const handleAuto = require("../handlers/autocompleteHandler");
+const handleContext = require("../handlers/contextMenuHandler");
 
-// ✅ Registry sync (DB) - ajouté
-const { syncRegistryAll } = require("./handlers/registrySync");
+const { checkPermsDb, deny } = require("../src/utils/permissionGuardDb");
 
-loadEnv();
-
-// --- Sécurité env ---
-if (!process.env.DISCORD_TOKEN) {
-  logger.error("DISCORD_TOKEN manquant dans .env");
-  process.exit(1);
-}
-
-// --- Intents : version "full" ---
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildPresences,
-
-    GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.GuildVoiceStates,
-
-    GatewayIntentBits.GuildInvites,
-    GatewayIntentBits.GuildModeration,
-
-    GatewayIntentBits.GuildEmojisAndStickers,
-    GatewayIntentBits.GuildWebhooks,
-    GatewayIntentBits.GuildIntegrations,
-
-    GatewayIntentBits.GuildScheduledEvents,
-    GatewayIntentBits.GuildMessageTyping,
-
-    GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.DirectMessageTyping,
-    GatewayIntentBits.DirectMessageReactions,
-  ],
-  partials: [
-    Partials.Channel,
-    Partials.Message,
-    Partials.Reaction,
-    Partials.User,
-    Partials.ThreadMember,
-  ],
-});
-
-// Collections
-client.commands = new Collection();
-client.prefixGlobal = new Collection();
-client.prefixDev = new Collection();
-
-// Interactions (buttons/modals/select/autocomplete)
-const loadInteractions = require("./handlers/loadInteractions");
-loadInteractions(client);
-
-// Crash safety
-process.on("unhandledRejection", (err) => logger.error(`UNHANDLED REJECTION: ${err?.stack || err}`));
-process.on("uncaughtException", (err) => logger.error(`UNCAUGHT EXCEPTION: ${err?.stack || err}`));
-
-(async () => {
-  try {
-    await loadSlashCommands(client);
-    await loadPrefixCommands(client);
-    await loadEvents(client);
-
-    // ✅ Sync registry en DB (slash/buttons/modals/select/autocomplete)
-    // Si la DB n'est pas configurée, ça va throw -> on log et on continue
+module.exports = {
+  name: "interactionCreate",
+  once: false,
+  async execute(client, interaction) {
     try {
-      await syncRegistryAll();
-    } catch (e) {
-      logger.warn(`Registry sync ignoré (DB pas prête ?) : ${e?.message || e}`);
-    }
+      // Slash
+      if (interaction.isChatInputCommand()) {
+        const cmd = client.commands.get(interaction.commandName);
+        if (!cmd) return;
 
-    await client.login(process.env.DISCORD_TOKEN);
-  } catch (err) {
-    logger.error(`Erreur au démarrage: ${err?.stack || err}`);
-    process.exit(1);
-  }
-})();
+        const itemKey = `slash:${interaction.commandName}`;
+        const res = await checkPermsDb(interaction, itemKey);
+        if (!res.ok) return deny(interaction, res.reason);
+
+        return cmd.execute(interaction, client);
+      }
+
+      // Context menu
+      if (interaction.isContextMenuCommand()) {
+        // si tu as un handler dédié
+        if (typeof handleContext === "function") return handleContext(client, interaction);
+
+        const cmd = client.commands.get(interaction.commandName);
+        if (!cmd) return;
+
+        const itemKey = `context:${interaction.commandName}`;
+        const res = await checkPermsDb(interaction, itemKey);
+        if (!res.ok) return deny(interaction, res.reason);
+
+        return cmd.execute(interaction, client);
+      }
+
+      // Autocomplete
+      if (interaction.isAutocomplete()) return handleAuto(client, interaction);
+
+      // Buttons
+      if (interaction.isButton()) return handleButton(client, interaction);
+
+      // Select menus
+      if (interaction.isAnySelectMenu()) return handleSelect(client, interaction);
+
+      // Modals
+      if (interaction.isModalSubmit()) return handleModal(client, interaction);
+    } catch (err) {
+      logger.error(`interactionCreate error: ${err?.stack || err}`);
+      // on évite de spammer si déjà répondu
+      try {
+        if (!interaction.isAutocomplete?.() && !interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: "❌ Erreur interne.", ephemeral: true });
+        }
+      } catch {}
+    }
+  },
+};
