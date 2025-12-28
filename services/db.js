@@ -1,6 +1,6 @@
-// src/services/db.js
+// services/db.js
 const mysql = require("mysql2/promise");
-const logger = require("../utils/logger");
+const logger = require("../src/utils/logger");
 
 let pool;
 
@@ -15,7 +15,7 @@ function getPool() {
     database: process.env.DB_NAME,
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
   });
 
   logger.info("DB pool initialisé");

@@ -1,10 +1,10 @@
-// src/services/registry.db.js
+// services/registry.db.js
 const { query } = require("./db");
 
 /**
- * Upsert registry_items sans casser tes overrides.
+ * Upsert registry_items sans casser les overrides.
  * - met à jour default_name/default_description
- * - s'assure qu'un override existe (vide) pour l'item (optionnel mais pratique)
+ * - s'assure qu'un override existe pour l'item (ligne vide)
  */
 async function upsertRegistryItem({ itemKey, type, defaultName, defaultDescription }) {
   await query(
@@ -18,27 +18,23 @@ async function upsertRegistryItem({ itemKey, type, defaultName, defaultDescripti
     [itemKey, type, defaultName, defaultDescription || null]
   );
 
-  // Crée un override "vide" si pas existant (comme un placeholder)
   await query(
     `INSERT INTO registry_item_overrides (item_key)
      VALUES (?)
-     ON DUPLICATE KEY UPDATE item_key = item_key`,
+     ON DUPLICATE KEY UPDATE item_key=item_key`,
     [itemKey]
   );
 }
 
-/**
- * Récupère la catégorie globale (override) d'un item.
- * Si pas défini => null
- */
-async function getOverrideForItem(itemKey) {
+async function getGlobalCategoryForItem(itemKey) {
   const rows = await query(
-    `SELECT o.category_key, o.label_override, o.description_override, o.sort_index, o.is_hidden
+    `SELECT o.category_key
      FROM registry_item_overrides o
-     WHERE o.item_key = ?`,
+     WHERE o.item_key = ?
+     LIMIT 1`,
     [itemKey]
   );
-  return rows[0] || null;
+  return rows[0]?.category_key || null;
 }
 
-module.exports = { upsertRegistryItem, getOverrideForItem };
+module.exports = { upsertRegistryItem, getGlobalCategoryForItem };

@@ -1,4 +1,4 @@
-// src/services/permissions.db.js
+// services/permissions.db.js
 const { query } = require("./db");
 
 async function getGuildRoles(guildId) {
@@ -10,13 +10,11 @@ async function getGuildRoles(guildId) {
 }
 
 /**
- * Retourne la règle la plus précise :
- * 1) scope=item + item_key
- * 2) scope=category + category_name
+ * 1) règle scope=item pour item_key
+ * 2) sinon règle scope=category pour category_key
  * 3) sinon null (public)
  */
-async function getPermissionRule(guildId, itemKey, categoryName) {
-  // item override
+async function getPermissionRule(guildId, itemKey, categoryKey) {
   const item = await query(
     `SELECT access, require_discord_perms
      FROM permissions_rules
@@ -27,15 +25,14 @@ async function getPermissionRule(guildId, itemKey, categoryName) {
   );
   if (item[0]) return item[0];
 
-  // category fallback
-  if (categoryName) {
+  if (categoryKey) {
     const cat = await query(
       `SELECT access, require_discord_perms
        FROM permissions_rules
-       WHERE guild_id = ? AND scope = 'category' AND category_name = ?
+       WHERE guild_id = ? AND scope = 'category' AND category_key = ?
        ORDER BY updated_at DESC
        LIMIT 1`,
-      [guildId, categoryName]
+      [guildId, categoryKey]
     );
     if (cat[0]) return cat[0];
   }
