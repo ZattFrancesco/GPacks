@@ -14,30 +14,32 @@ module.exports = {
   once: false,
   async execute(client, interaction) {
     try {
+      // Blacklist globale + guard DB : on bloque TOUTES les interactions
+      const inferKey = () => {
+        if (interaction.isChatInputCommand?.()) return `slash:${interaction.commandName}`;
+        if (interaction.isContextMenuCommand?.()) return `context:${interaction.commandName}`;
+        if (interaction.isButton?.()) return `button:${interaction.customId}`;
+        if (interaction.isModalSubmit?.()) return `modal:${interaction.customId}`;
+        if (interaction.isAnySelectMenu?.()) return `select:${interaction.customId}`;
+        if (interaction.isAutocomplete?.()) return `autocomplete:${interaction.commandName}`;
+        return interaction?.customId || interaction?.commandName || null;
+      };
+
+      const pre = await checkPermsDb(interaction, inferKey());
+      if (!pre.ok) return deny(interaction, pre.reason);
+
       // Slash
       if (interaction.isChatInputCommand()) {
         const cmd = client.commands.get(interaction.commandName);
         if (!cmd) return;
-
-        const itemKey = `slash:${interaction.commandName}`;
-        const res = await checkPermsDb(interaction, itemKey);
-        if (!res.ok) return deny(interaction, res.reason);
-
         return cmd.execute(interaction, client);
       }
 
       // Context menu
       if (interaction.isContextMenuCommand()) {
-        // si tu as un handler dédié
         if (typeof handleContext === "function") return handleContext(client, interaction);
-
         const cmd = client.commands.get(interaction.commandName);
         if (!cmd) return;
-
-        const itemKey = `context:${interaction.commandName}`;
-        const res = await checkPermsDb(interaction, itemKey);
-        if (!res.ok) return deny(interaction, res.reason);
-
         return cmd.execute(interaction, client);
       }
 
@@ -54,7 +56,6 @@ module.exports = {
       if (interaction.isModalSubmit()) return handleModal(client, interaction);
     } catch (err) {
       logger.error(`interactionCreate error: ${err?.stack || err}`);
-      // on évite de spammer si déjà répondu
       try {
         if (!interaction.isAutocomplete?.() && !interaction.replied && !interaction.deferred) {
           await interaction.reply({ content: "❌ Erreur interne.", ephemeral: true });
