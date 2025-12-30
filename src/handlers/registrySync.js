@@ -1,8 +1,8 @@
 // handlers/registrySync.js
 const path = require("path");
 const fs = require("fs");
-const logger = require("../src/utils/logger");
-const { upsertRegistryItem } = require("../services/registry.db");
+const logger = require("../utils/logger");
+const { upsertRegistryItem } = require("../../services/registry.db");
 
 function getAllJsFiles(dir) {
   if (!fs.existsSync(dir)) return [];
