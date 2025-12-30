@@ -1,8 +1,11 @@
-// handlers/modalHandler.js
 const { checkPermsDb, deny } = require("../src/utils/permissionGuardDb");
 
 module.exports = async (client, interaction) => {
-  const modal = client.modals.get(interaction.customId);
+  let modal = client.modals?.get(interaction.customId);
+
+  if (!modal && Array.isArray(client.modalsPrefix)) {
+    modal = client.modalsPrefix.find((m) => interaction.customId.startsWith(m.idPrefix));
+  }
   if (!modal) return;
 
   const itemKey = `modal:${interaction.customId}`;

@@ -1,8 +1,11 @@
-// handlers/buttonHandler.js
 const { checkPermsDb, deny } = require("../src/utils/permissionGuardDb");
 
 module.exports = async (client, interaction) => {
-  const btn = client.buttons.get(interaction.customId);
+  let btn = client.buttons?.get(interaction.customId);
+
+  if (!btn && Array.isArray(client.buttonsPrefix)) {
+    btn = client.buttonsPrefix.find((b) => interaction.customId.startsWith(b.idPrefix));
+  }
   if (!btn) return;
 
   const itemKey = `button:${interaction.customId}`;
