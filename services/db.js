@@ -4,19 +4,42 @@ const logger = require("../src/utils/logger");
 
 let pool = null;
 
+function env(name, fallback) {
+  const v = process.env[name];
+  if (v !== undefined && v !== "") return v;
+  if (fallback) {
+    const f = process.env[fallback];
+    if (f !== undefined && f !== "") return f;
+  }
+  return undefined;
+}
+
 function getPool() {
   if (!pool) {
+    const host = env("DB_HOST") || "127.0.0.1";
+    const port = Number(env("DB_PORT") || 3306);
+    const user = env("DB_USER") || "root";
+    const password = env("DB_PASSWORD", "DB_PASS"); // ✅ accepte les 2 noms
+    const database = env("DB_NAME");
+
+    logger.info("Pool MySQL initialisé", {
+      host,
+      port,
+      user,
+      database,
+      hasPassword: Boolean(password),
+    });
+
     pool = mysql.createPool({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
+      host,
+      port,
+      user,
+      password,
+      database,
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
     });
-
-    logger.info("Pool MySQL initialisé");
   }
   return pool;
 }
@@ -27,22 +50,15 @@ async function query(sql, params = []) {
     const [rows] = await p.execute(sql, params);
     return rows;
   } catch (err) {
-    // ✅ Dump clair + complet (et maintenant visible grâce au logger multi-args)
     logger.error("===== MYSQL ERROR =====");
-    logger.error("name:", err?.name);
     logger.error("code:", err?.code);
-    logger.error("errno:", err?.errno);
     logger.error("message:", err?.message);
     logger.error("sqlMessage:", err?.sqlMessage);
-    logger.error("sqlState:", err?.sqlState);
     logger.error("sql:", err?.sql);
     logger.error("params:", params);
-    logger.error("stack:", err?.stack);
     logger.error("=======================");
     throw err;
   }
 }
 
-module.exports = {
-  query,
-};
+module.exports = { query };
