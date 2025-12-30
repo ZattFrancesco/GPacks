@@ -1,6 +1,7 @@
-// src/handlers/registrySync.js
+// handlers/registrySync.js
 const path = require("path");
 const fs = require("fs");
+const logger = require("../src/utils/logger");
 const { upsertRegistryItem } = require("../services/registry.db");
 
 function getAllJsFiles(dir) {
@@ -15,59 +16,30 @@ function getAllJsFiles(dir) {
   return out;
 }
 
-async function syncSlashAndContext() {
-  const commandsRoot = path.join(process.cwd(), "commands");
-  const files = getAllJsFiles(commandsRoot);
+module.exports = async function registrySync() {
+  try {
+    const commandsRoot = path.join(process.cwd(), "commands");
+    const files = getAllJsFiles(commandsRoot);
 
-  for (const file of files) {
-    const cmd = require(file);
-    if (!cmd?.data?.name) continue;
+    for (const file of files) {
+      const cmd = require(file);
+      if (!cmd?.data?.name) continue;
 
-    // slash + context menus passent tous par commands/
-    // type réel : on détecte si ContextMenuCommandBuilder (pas simple sans instance),
-    // donc on met "slash" par défaut. Tu pourras affiner plus tard.
-    const itemKey = `slash:${cmd.data.name}`;
-    const defaultName = `/${cmd.data.name}`;
-    const defaultDescription = cmd.data.description || null;
+      const itemKey = `slash:${cmd.data.name}`;
+      const defaultName = `/${cmd.data.name}`;
+      const defaultDescription = cmd.data.description || null;
 
-    await upsertRegistryItem({
-      itemKey,
-      type: "slash",
-      defaultName,
-      defaultDescription,
-    });
+      await upsertRegistryItem({
+        item_key: itemKey,
+        type: "slash",
+        default_name: defaultName,
+        default_description: defaultDescription,
+      });
+    }
+
+    logger.info(`[registrySync] OK: ${files.length} commande(s) sync en DB`);
+  } catch (err) {
+    // Important : si MySQL est down, on ne casse pas le bot
+    logger.warn("Registry DB ignoré (DB pas prête ?) :", err?.message || err);
   }
-}
-
-async function syncSimpleFolder(folderName, type) {
-  const root = path.join(process.cwd(), folderName);
-  const files = getAllJsFiles(root);
-
-  for (const file of files) {
-    const item = require(file);
-    const id = item?.id || item?.name;
-    if (!id) continue;
-
-    const itemKey = `${type}:${id}`;
-    await upsertRegistryItem({
-      itemKey,
-      type,
-      defaultName: id,
-      defaultDescription: item.description || null,
-    });
-  }
-}
-
-async function syncRegistryAll() {
-  await syncSlashAndContext();
-
-  await syncSimpleFolder("buttons", "button");
-  await syncSimpleFolder("modals", "modal");
-  await syncSimpleFolder("selectMenus", "select");
-  await syncSimpleFolder("autocomplete", "autocomplete");
-
-  // optionnel:
-  // await syncSimpleFolder("prefixCommands", "prefix"); // si tu veux aussi les lister
-}
-
-module.exports = { syncRegistryAll };
+};

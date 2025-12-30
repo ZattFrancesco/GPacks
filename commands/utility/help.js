@@ -14,19 +14,40 @@ function pickTitle(cat) {
 }
 
 function formatItem(row) {
-  const name = row.label_override || row.default_name || row.item_key;
+  const label = row.label_override || row.default_name || row.item_key;
   const desc = row.description_override || row.default_description || "";
-  return desc ? `• **${name}** — ${desc}` : `• **${name}**`;
+  return desc ? `• **${label}** — ${desc}` : `• **${label}**`;
+}
+
+function fallbackHelpFromLoadedCommands(interaction) {
+  const cmds = interaction.client?.commands;
+  const names = [];
+
+  if (cmds && typeof cmds.forEach === "function") {
+    cmds.forEach((cmd, name) => {
+      names.push(`• **/${name}** — ${cmd?.data?.description || "—"}`);
+    });
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle("📚 Aide du bot (mode fallback)")
+    .setDescription(
+      "La DB est indisponible, donc j'affiche la liste simple des commandes chargées.\n\n" +
+        (names.length ? names.join("\n").slice(0, 3900) : "Aucune commande trouvée.")
+    )
+    .setFooter({ text: "Astuce: vérifie MySQL (DB_HOST/DB_PORT) pour retrouver le help par catégories." });
+
+  return interaction.reply({ embeds: [embed], ephemeral: true });
 }
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("help")
-    .setDescription("Affiche l’aide du bot (pilotée par la base de données)")
+    .setDescription("Affiche l'aide du bot")
     .addStringOption((opt) =>
       opt
         .setName("category")
-        .setDescription("Clé de catégorie (optionnel, ex: utility, tickets)")
+        .setDescription("Clé de catégorie (ex: tickets, moderation...)")
         .setRequired(false)
     ),
 
@@ -34,13 +55,13 @@ module.exports = {
     try {
       const categoryKey = interaction.options.getString("category");
 
-      // Si on demande une catégorie précise
+      // Si category demandé, afficher les items de cette catégorie
       if (categoryKey) {
         const items = await getItemsForCategory(categoryKey);
 
         if (!items.length) {
           return interaction.reply({
-            content: `❌ Aucune commande dans la catégorie **${categoryKey}** (ou catégorie inconnue).`,
+            content: `❌ Aucune commande trouvée pour la catégorie \`${categoryKey}\`.`,
             ephemeral: true,
           });
         }
@@ -52,7 +73,7 @@ module.exports = {
         return interaction.reply({ embeds: [embed], ephemeral: true });
       }
 
-      // Sinon, affiche la liste des catégories + un résumé
+      // Sinon, liste catégories DB
       const categories = await getVisibleCategories();
 
       const base = new EmbedBuilder()
@@ -60,11 +81,9 @@ module.exports = {
         .setDescription("Choisis une catégorie avec `/help category:<clé>`.\n\n**Catégories disponibles :**")
         .setFooter({ text: "Help piloté par DB (catégories + ordre + hidden + overrides)" });
 
-      // Ajoute les catégories comme une liste
       const lines = categories.map((c) => `• **${pickTitle(c)}** — \`${c.category_key}\``);
       base.addFields([{ name: "Catégories", value: lines.join("\n").slice(0, 1024) || "Aucune", inline: false }]);
 
-      // Optionnel : “Non classé”
       const uncategorized = await getUncategorizedItems();
       if (uncategorized.length) {
         base.addFields([
@@ -76,9 +95,13 @@ module.exports = {
         ]);
       }
 
-      // Couleur : si tu veux une couleur globale, tu peux la mettre ici
       return interaction.reply({ embeds: [base], ephemeral: true });
     } catch (err) {
+      // Si DB down (ECONNREFUSED), on fallback au lieu d'afficher "Erreur interne"
+      if (err?.code === "ECONNREFUSED") {
+        return fallbackHelpFromLoadedCommands(interaction);
+      }
+
       logger.error(`help cmd error: ${err?.stack || err}`);
       return interaction.reply({ content: "❌ Erreur interne sur /help.", ephemeral: true }).catch(() => {});
     }

@@ -1,8 +1,8 @@
 // handlers/registrySync.js
 const path = require("path");
 const fs = require("fs");
-const logger = require("../utils/logger");
-const { upsertRegistryItem } = require("../../services/registry.db");
+const logger = require("../src/utils/logger");
+const { upsertRegistryItem } = require("../services/registry.db");
 
 function getAllJsFiles(dir) {
   if (!fs.existsSync(dir)) return [];
@@ -16,56 +16,30 @@ function getAllJsFiles(dir) {
   return out;
 }
 
-async function syncSlashCommands() {
-  const commandsRoot = path.join(process.cwd(), "commands");
-  const files = getAllJsFiles(commandsRoot);
-
-  for (const file of files) {
-    const cmd = require(file);
-    if (!cmd?.data?.name) continue;
-
-    const itemKey = `slash:${cmd.data.name}`;
-    await upsertRegistryItem({
-      itemKey,
-      type: "slash",
-      defaultName: `/${cmd.data.name}`,
-      defaultDescription: cmd.data.description || null,
-    });
-  }
-}
-
-async function syncFolder(folderName, type, idField = "id") {
-  const root = path.join(process.cwd(), folderName);
-  const files = getAllJsFiles(root);
-
-  for (const file of files) {
-    const item = require(file);
-    const id = item?.[idField] || item?.name;
-    if (!id) continue;
-
-    const itemKey = `${type}:${id}`;
-    await upsertRegistryItem({
-      itemKey,
-      type,
-      defaultName: id,
-      defaultDescription: item.description || null,
-    });
-  }
-}
-
-async function syncRegistryAll() {
+module.exports = async function registrySync() {
   try {
-    await syncSlashCommands();
-    await syncFolder("buttons", "button", "id");
-    await syncFolder("modals", "modal", "id");
-    await syncFolder("selectMenus", "select", "id");
-    await syncFolder("autocomplete", "autocomplete", "name");
+    const commandsRoot = path.join(process.cwd(), "commands");
+    const files = getAllJsFiles(commandsRoot);
 
-    logger.info("Registry sync: OK");
+    for (const file of files) {
+      const cmd = require(file);
+      if (!cmd?.data?.name) continue;
+
+      const itemKey = `slash:${cmd.data.name}`;
+      const defaultName = `/${cmd.data.name}`;
+      const defaultDescription = cmd.data.description || null;
+
+      await upsertRegistryItem({
+        item_key: itemKey,
+        type: "slash",
+        default_name: defaultName,
+        default_description: defaultDescription,
+      });
+    }
+
+    logger.info(`[registrySync] OK: ${files.length} commande(s) sync en DB`);
   } catch (err) {
-    logger.error(`Registry sync: ERREUR: ${err?.stack || err}`);
-    throw err;
+    // Important : si MySQL est down, on ne casse pas le bot
+    logger.warn("Registry DB ignoré (DB pas prête ?) :", err?.message || err);
   }
-}
-
-module.exports = { syncRegistryAll };
+};
