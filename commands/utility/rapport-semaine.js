@@ -1,7 +1,7 @@
 // commands/utility/rapport-semaine.js
-
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const { getLastReset, listReports, getReportCount } = require("../../services/rapportJugement.db");
+const { mentionify } = require("../../src/utils/rapportJugementFormat");
 
 function safe(v, fallback = "/") {
   const t = (v ?? "").toString().trim();
@@ -14,7 +14,6 @@ function cut(str, max = 120) {
   return s.slice(0, max - 1) + "…";
 }
 
-// Split en fields (value max ~1024, on garde marge)
 function chunkBlocksIntoFields(blocks, maxLen = 950) {
   const fields = [];
   let current = "";
@@ -32,7 +31,6 @@ function chunkBlocksIntoFields(blocks, maxLen = 950) {
   return fields;
 }
 
-// format "Oui/Non"
 function yn(v) {
   return v ? "Oui" : "Non";
 }
@@ -40,10 +38,11 @@ function yn(v) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("rapport-semaine")
-    .setDescription("Liste détaillée des rapports de Jugements")
-    .addIntegerOption(opt =>
-      opt.setName("limit")
-        .setDescription("Nombre max de rapports à afficher (défaut 30, max 120)")
+    .setDescription("Liste détaillée des rapports depuis le dernier reset (format paie)")
+    .addIntegerOption((opt) =>
+      opt
+        .setName("limit")
+        .setDescription("Nombre max de rapports (défaut 30, max 120)")
         .setRequired(false)
     ),
 
@@ -56,27 +55,12 @@ module.exports = {
     const total = await getReportCount(interaction.guildId, sinceDate);
     const rows = await listReports(interaction.guildId, sinceDate, limit);
 
-    // fetch reporters names
-    const uniqueReporterIds = [...new Set(rows.map(r => String(r.reporter_user_id)).filter(Boolean))];
-
-    const reporterNameMap = new Map();
-    await Promise.allSettled(
-      uniqueReporterIds.map(async (id) => {
-        try {
-          const u = await interaction.client.users.fetch(id);
-          reporterNameMap.set(id, u?.username || `<@${id}>`);
-        } catch {
-          reporterNameMap.set(id, `<@${id}>`);
-        }
-      })
-    );
-
     const header = lastReset?.reset_at
       ? `Depuis le reset : <t:${Math.floor(new Date(lastReset.reset_at).getTime() / 1000)}:F>`
       : "Aucun reset : depuis le début.";
 
     const embed = new EmbedBuilder()
-      .setTitle("🧾 Rapports de jugement de la semaine")
+      .setTitle("🧾 Rapports de jugement — Paie semaine")
       .setDescription(`${header}\n**Total période : ${total}** • **Affichés : ${rows.length}/${limit}**`)
       .setColor(0x2b2d31);
 
@@ -92,9 +76,10 @@ module.exports = {
 
       const suspect = `${safe(r.nom)} ${safe(r.prenom)}`;
 
-      const juge = safe(r.judge_name);
-      const proc = safe(r.procureur);
-      const avocat = safe(r.avocat);
+      // ✅ mentions si possible
+      const juge = mentionify(r.judge_name);
+      const proc = mentionify(r.procureur);
+      const avocat = mentionify(r.avocat);
 
       const peine = cut(r.peine, 80);
       const amende = cut(r.amende, 40);
@@ -104,14 +89,15 @@ module.exports = {
 
       const obs = cut(r.observation, 140);
 
-      const by = reporterNameMap.get(String(r.reporter_user_id)) || `<@${r.reporter_user_id}>`;
+      // ✅ Enregistré par = mention direct
+      const by = r.reporter_user_id ? `<@${r.reporter_user_id}>` : "/";
 
       return [
         `🗓️ **Date**: <t:${ts}:d> • 👤 **Suspect**: **${suspect}**`,
         `⚖️ **Juge**: ${juge} • 🧑‍⚖️ **Proc**: ${proc} • 🧑‍💼 **Avocat**: ${avocat}`,
         `💰 **Peine**: ${peine} • **Amende**: ${amende} • **TIG**: ${yn(tigOui)}${tigOui ? ` (**${tigEnt}**)` : ""}`,
         `📝 **Obs**: ${obs}`,
-        `✍️ **Enregistré par**: **${by}**`,
+        `✍️ **Enregistré par**: ${by}`,
       ].join("\n");
     });
 

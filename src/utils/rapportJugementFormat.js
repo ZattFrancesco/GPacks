@@ -2,7 +2,7 @@
 const { EmbedBuilder } = require("discord.js");
 
 /**
- * Convertit une date saisie en timestamp UNIX
+ * Convertit une date saisie en timestamp UNIX (secondes)
  */
 function parseJudgementDate(raw) {
   const now = Math.floor(Date.now() / 1000);
@@ -17,9 +17,7 @@ function parseJudgementDate(raw) {
   if (/^\d{9,12}$/.test(s)) return Number(s);
 
   const d = new Date(s.replace("T", " "));
-  if (!Number.isNaN(d.getTime())) {
-    return Math.floor(d.getTime() / 1000);
-  }
+  if (!Number.isNaN(d.getTime())) return Math.floor(d.getTime() / 1000);
 
   return now;
 }
@@ -30,7 +28,23 @@ function safe(v, fallback = "/") {
 }
 
 /**
- * Génère l'embed du rapport
+ * Transforme "123" ou "<@!123>" ou "<@123>" en "<@123>"
+ * Si c'est pas un id/mention, renvoie le texte tel quel.
+ */
+function mentionify(input, fallback = "/") {
+  const s = safe(input, "").trim();
+  if (!s) return fallback;
+
+  const m = s.match(/^<@!?(\d{16,20})>$/);
+  if (m) return `<@${m[1]}>`;
+
+  if (/^\d{16,20}$/.test(s)) return `<@${s}>`;
+
+  return s;
+}
+
+/**
+ * Embed final du rapport
  */
 function buildRapportJugementEmbed(payload) {
   const ts = payload.dateJugement;
@@ -49,9 +63,9 @@ function buildRapportJugementEmbed(payload) {
       {
         name: "⚖️ Rôles",
         value:
-          `**Juge :** ${safe(payload.juge)}\n` +
-          `**Procureur :** ${safe(payload.procureur)}\n` +
-          `**Avocat :** ${safe(payload.avocat)}`,
+          `**Juge :** ${mentionify(payload.juge)}\n` +
+          `**Procureur :** ${mentionify(payload.procureur)}\n` +
+          `**Avocat :** ${mentionify(payload.avocat)}`,
       },
       {
         name: "⛓️ Sanctions",
@@ -73,4 +87,5 @@ function buildRapportJugementEmbed(payload) {
 module.exports = {
   parseJudgementDate,
   buildRapportJugementEmbed,
+  mentionify, // utile si tu veux le réutiliser ailleurs
 };
