@@ -66,7 +66,7 @@ module.exports = {
       }
 
       const tigRaw = safeVal(interaction, "tig") || "";
-      const tigBool = ["oui", "o", "yes", "y"].includes(tigRaw.toLowerCase());
+      const tigBool = ["oui", "o", "yes", "y"].includes(tigRaw.toLowerCase().trim());
 
       const payload = {
         guildId: interaction.guildId,

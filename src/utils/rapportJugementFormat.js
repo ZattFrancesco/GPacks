@@ -1,73 +1,83 @@
 // src/utils/rapportJugementFormat.js
 
-function parseUnixTimestamp(input) {
-  const raw = (input ?? "").trim();
-  if (!raw) return Math.floor(Date.now() / 1000);
+/**
+ * Convertit une date saisie dans le modal en timestamp UNIX (secondes).
+ * Accepte :
+ * - vide -> maintenant
+ * - "1735689600" (timestamp)
+ * - "<t:1735689600>" ou "<t:1735689600:F>"
+ * - "2025-12-31 18:00"
+ * - "2025-12-31"
+ */
+function parseJudgementDate(raw) {
+  const now = Math.floor(Date.now() / 1000);
+  if (!raw) return now;
 
-  // Si l'utilisateur colle un timestamp Discord <t:1234567890:...>
-  const m = raw.match(/<t:(\d{6,16})(?::[a-zA-Z])?>/);
+  const s = String(raw).trim();
+  if (!s) return now;
+
+  // <t:1234567890> ou <t:1234567890:F>
+  const m = s.match(/<t:(\d{9,12})(?::[a-zA-Z])?>/);
   if (m) return Number(m[1]);
 
-  // Numérique (secondes ou millisecondes)
-  if (/^\d{6,16}$/.test(raw)) {
-    const n = Number(raw);
-    if (raw.length >= 13) return Math.floor(n / 1000); // ms -> s
-    return n;
+  // timestamp brut
+  if (/^\d{9,12}$/.test(s)) return Number(s);
+
+  // date texte
+  // accepte "YYYY-MM-DD" ou "YYYY-MM-DD HH:mm"
+  const normalized = s.replace("T", " ").trim();
+  const d = new Date(normalized);
+
+  if (!Number.isNaN(d.getTime())) {
+    return Math.floor(d.getTime() / 1000);
   }
 
-  // Essai de parsing Date
-  const d = new Date(raw);
-  if (!Number.isNaN(d.getTime())) return Math.floor(d.getTime() / 1000);
-
-  // Fallback: maintenant
-  return Math.floor(Date.now() / 1000);
+  // fallback -> maintenant
+  return now;
 }
 
-function parseOuiNon(input) {
-  const v = (input ?? "").trim().toLowerCase();
-  if (["oui", "o", "yes", "y", "1", "true"].includes(v)) return true;
-  if (["non", "n", "no", "0", "false"].includes(v)) return false;
-  return false;
+function yn(v) {
+  return v ? "Oui" : "Non";
 }
 
-function extractMentionUserId(text) {
-  const t = (text ?? "").trim();
-  const m = t.match(/<@!?(\d{15,25})>/);
-  return m ? m[1] : null;
+function safeText(v, fallback = "/") {
+  const t = (v ?? "").toString().trim();
+  return t.length ? t : fallback;
 }
 
-function normalizeJudgeKey(judgeUserId, judgeName) {
-  if (judgeUserId) return `U:${judgeUserId}`;
-  const t = (judgeName ?? "").trim().toLowerCase();
-  return `T:${t || "inconnu"}`;
-}
+/**
+ * Génère ton pattern texte final.
+ */
+function formatRapportJugement(payload) {
+  const ts = payload.dateJugement || Math.floor(Date.now() / 1000);
 
-function buildRapportText(data) {
-  const ts = data.date_jugement_unix ? Number(data.date_jugement_unix) : Math.floor(Date.now() / 1000);
-  const tigTxt = data.tig ? "Oui" : "Non";
-  const ent = data.tig ? (data.tig_entreprise?.trim() ? data.tig_entreprise.trim() : "/") : "/";
-
-  return (
-    "-----\n-----\n-----\n\n" +
-    `Nom: ${data.nom || "à Remplir"}\n` +
-    `Prénom: ${data.prenom || "à Remplir"}\n\n` +
-    `Date de jugement : <t:${ts}:F>\n\n` +
-    `Juge : ${data.judge_name || "à Remplir"}\n` +
-    `Procureur : ${data.procureur || "à Remplir"}\n` +
-    `Avocat : ${data.avocat || "à Remplir"}\n\n` +
-    `Peine : ${data.peine || "à Remplir"}\n` +
-    `Amende : ${data.amende || "à Remplir"}\n` +
-    `T.I.G. : ${tigTxt}\n` +
-    `Entreprise T.I.G. : ${ent}\n\n` +
-    `Observation : ${data.observation || "à Remplir"}\n` +
-    "\n-----\n-----\n-----"
-  );
+  return [
+    "-----",
+    "-----",
+    "-----",
+    "",
+    `Nom: ${safeText(payload.nom, "à Remplir")}`,
+    `Prénom: ${safeText(payload.prenom, "à Remplir")}`,
+    "",
+    `Date de jugement : <t:${ts}:F>`,
+    "",
+    `Juge : ${safeText(payload.juge, "à Remplir")}`,
+    `Procureur : ${safeText(payload.procureur, "à Remplir")}`,
+    `Avocat : ${safeText(payload.avocat, "à Remplir")}`,
+    "",
+    `Peine : ${safeText(payload.peine, "à Remplir")}`,
+    `Amande : ${safeText(payload.amende, "à Remplir")}`,
+    `T.I.G. : ${yn(!!payload.tig)}`,
+    `Entreprise T.I.G. : ${safeText(payload.tigEntreprise, "/")}`,
+    "",
+    `Observation : ${safeText(payload.observation, "à Remplir")}`,
+    "-----",
+    "-----",
+    "-----",
+  ].join("\n");
 }
 
 module.exports = {
-  parseUnixTimestamp,
-  parseOuiNon,
-  extractMentionUserId,
-  normalizeJudgeKey,
-  buildRapportText,
+  parseJudgementDate,
+  formatRapportJugement,
 };
