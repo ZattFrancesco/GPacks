@@ -12,7 +12,6 @@ const db = require("../services/jugement.db");
 const { getDraft, updateDraft, clearDraft } = require("../src/utils/dojDrafts");
 const { buildJugementEmbed } = require("../src/utils/jugementEmbed");
 
-// --- UI
 function wizardComponents(userId) {
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -43,7 +42,6 @@ function wizardComponents(userId) {
   return [row1, row2];
 }
 
-// Attend le prochain message du user dans le channel avec au moins 1 attachment
 async function waitForAttachment(channel, userId, ms = 60_000) {
   return new Promise((resolve) => {
     const collector = channel.createMessageCollector({
@@ -66,11 +64,35 @@ async function waitForAttachment(channel, userId, ms = 60_000) {
 
 async function tryDeleteMessage(message) {
   try {
-    // si le bot a la perm, ça évite de polluer le salon
     await message.delete();
   } catch {
-    // on ignore si pas de perm
+    // ignore
   }
+}
+
+/**
+ * ✅ Reposte les fichiers envoyés par l'agent via le bot
+ * pour obtenir des URLs CDN stables (cdn.discordapp.com)
+ */
+async function repostAttachmentsForCdn(channel, message, label) {
+  const files = [...message.attachments.values()].map((a) => ({
+    attachment: a.url,
+    name: a.name || "image",
+  }));
+
+  if (!files.length) return [];
+
+  // On reposte dans le salon, et on récupère les URLs CDN générées.
+  const sent = await channel.send({
+    content: label || undefined,
+    files,
+  });
+
+  return [...sent.attachments.values()].map((a) => a.url);
+}
+
+function onlyHttpUrls(arr) {
+  return (arr || []).filter((u) => typeof u === "string" && /^https?:\/\/\S+$/i.test(u));
 }
 
 module.exports = {
@@ -105,65 +127,6 @@ module.exports = {
       });
     }
 
-    // --- Upload casier
-    if (action === "uploadCasier") {
-      await interaction.reply({
-        ephemeral: true,
-        content:
-          "📎 Envoie maintenant un **message dans ce salon** avec la/les **image(s)** du **casier**.\n" +
-          "Tu as 60 secondes. (Tu peux envoyer plusieurs images en une seule fois.)",
-      });
-
-      const msg = await waitForAttachment(channel, userId, 60_000);
-      if (!msg) {
-        return interaction.followUp({ ephemeral: true, content: "⏱️ Rien reçu. Réessaie en cliquant sur le bouton." });
-      }
-
-      const urls = [...msg.attachments.values()].map((a) => a.url);
-      const next = updateDraft(guildId, userId, {
-        photoCasierUrls: [...(draft.photoCasierUrls || []), ...urls],
-      });
-
-      await tryDeleteMessage(msg);
-
-      return interaction.followUp({
-        ephemeral: true,
-        content: `✅ Casier enregistré (${urls.length} image(s)).`,
-        embeds: [buildJugementEmbed(next)],
-        components: wizardComponents(userId),
-      });
-    }
-
-    // --- Upload individu
-    if (action === "uploadIndividu") {
-      await interaction.reply({
-        ephemeral: true,
-        content:
-          "📎 Envoie maintenant un **message dans ce salon** avec l’/les **image(s)** de l’**individu**.\n" +
-          "Tu as 60 secondes.",
-      });
-
-      const msg = await waitForAttachment(channel, userId, 60_000);
-      if (!msg) {
-        return interaction.followUp({ ephemeral: true, content: "⏱️ Rien reçu. Réessaie en cliquant sur le bouton." });
-      }
-
-      const urls = [...msg.attachments.values()].map((a) => a.url);
-      const next = updateDraft(guildId, userId, {
-        photoIndividuUrls: [...(draft.photoIndividuUrls || []), ...urls],
-      });
-
-      await tryDeleteMessage(msg);
-
-      return interaction.followUp({
-        ephemeral: true,
-        content: `✅ Individu enregistré (${urls.length} image(s)).`,
-        embeds: [buildJugementEmbed(next)],
-        components: wizardComponents(userId),
-      });
-    }
-
-    // --- Modal nb casiers
     if (action === "nbCasiers") {
       const modal = new ModalBuilder()
         .setCustomId(`doj:nbcasiers:${userId}`)
@@ -181,7 +144,53 @@ module.exports = {
       return interaction.showModal(modal);
     }
 
-    // --- Envoi final
+    if (action === "uploadCasier" || action === "uploadIndividu") {
+      const isCasier = action === "uploadCasier";
+      const what = isCasier ? "casier" : "individu";
+
+      await interaction.reply({
+        ephemeral: true,
+        content:
+          `📎 Envoie maintenant un **message dans ce salon** avec la/les **image(s)** du **${what}**.\n` +
+          `Tu as 60 secondes.`,
+      });
+
+      const msg = await waitForAttachment(channel, userId, 60_000);
+      if (!msg) {
+        return interaction.followUp({
+          ephemeral: true,
+          content: "⏱️ Rien reçu. Réessaie en cliquant sur le bouton.",
+        });
+      }
+
+      // On supprime le message de l'agent (si possible) pour garder le salon clean
+      await tryDeleteMessage(msg);
+
+      // ✅ Le bot reposte les images => URLs CDN garanties
+      const cdnUrls = await repostAttachmentsForCdn(
+        channel,
+        msg,
+        isCasier ? "Photo casier judiciaire:" : "Photo individu:"
+      );
+
+      const safeUrls = onlyHttpUrls(cdnUrls);
+
+      const next = isCasier
+        ? updateDraft(guildId, userId, {
+            photoCasierUrls: [...(draft.photoCasierUrls || []), ...safeUrls],
+          })
+        : updateDraft(guildId, userId, {
+            photoIndividuUrls: [...(draft.photoIndividuUrls || []), ...safeUrls],
+          });
+
+      return interaction.followUp({
+        ephemeral: true,
+        content: `✅ ${what} enregistré (${safeUrls.length} image(s)).`,
+        embeds: [buildJugementEmbed(next)],
+        components: wizardComponents(userId),
+      });
+    }
+
     if (action === "send") {
       const pingRoleIds = await db.getPingRoleIds(guildId);
 
@@ -189,33 +198,30 @@ module.exports = {
         ? `|| ${pingRoleIds.map((id) => `<@&${id}>`).join(" ")} ||`
         : null;
 
-      // 1) Embed principal
-      const embed = buildJugementEmbed(draft);
+      // 1) Message principal : ping + embed
       await channel.send({
         content: pingLine || undefined,
-        embeds: [embed],
+        embeds: [buildJugementEmbed(draft)],
       });
 
-      // 2) Photos en texte pur (URL seules sur leur ligne => preview fiable)
-      const casierUrls = (draft.photoCasierUrls || []).filter(Boolean);
-      const individuUrls = (draft.photoIndividuUrls || []).filter(Boolean);
+      // 2) Message URLs brutes seules (preview fiable)
+      const casierUrls = onlyHttpUrls(draft.photoCasierUrls);
+      const individuUrls = onlyHttpUrls(draft.photoIndividuUrls);
 
-      const photoBlocks = [];
+      const blocks = [];
 
       if (casierUrls.length) {
-        photoBlocks.push("Photo casier judiciaire:");
-        // URL seules
-        photoBlocks.push(casierUrls.join("\n"));
+        blocks.push("Photo casier judiciaire:");
+        blocks.push(casierUrls.join("\n")); // URL seules
       }
       if (individuUrls.length) {
-        if (photoBlocks.length) photoBlocks.push(""); // ligne vide
-        photoBlocks.push("Photo individu:");
-        photoBlocks.push(individuUrls.join("\n"));
+        if (blocks.length) blocks.push("");
+        blocks.push("Photo individu:");
+        blocks.push(individuUrls.join("\n"));
       }
 
-      const photosContent = photoBlocks.join("\n");
-
-      if (photosContent.trim()) {
+      const photosContent = blocks.join("\n").trim();
+      if (photosContent) {
         await channel.send({ content: photosContent });
       }
 
