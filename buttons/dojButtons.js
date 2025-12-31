@@ -12,8 +12,12 @@ const db = require("../services/jugement.db");
 const { getDraft, updateDraft, clearDraft } = require("../src/utils/dojDrafts");
 const { buildJugementEmbed } = require("../src/utils/jugementEmbed");
 
-function wizardComponents(userId, draft) {
-  const manualOn = !!draft?.manualPhotosReminder;
+/**
+ * Construit les boutons du wizard.
+ * - Le bouton "Photos manuelles" affiche ON/OFF selon draft.manualPhotosReminder
+ */
+function wizardComponents(userId, draft = {}) {
+  const manualOn = !!draft.manualPhotosReminder;
 
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -74,7 +78,7 @@ module.exports = {
       });
     }
 
-    // ✅ Toggle rappel photos manuel
+    // Toggle rappel photos manuel
     if (action === "toggleManualPhotos") {
       const next = updateDraft(guildId, userId, {
         manualPhotosReminder: !draft.manualPhotosReminder,
@@ -90,7 +94,7 @@ module.exports = {
       });
     }
 
-    // ✅ Modal "nb casiers"
+    // Modal "nb casiers"
     if (action === "nbCasiers") {
       const modal = new ModalBuilder()
         .setCustomId(`doj:nbcasiers:${userId}`)
@@ -108,7 +112,7 @@ module.exports = {
       return interaction.showModal(modal);
     }
 
-    // ✅ Envoi final
+    // Envoi final
     if (action === "send") {
       const pingRoleIds = await db.getPingRoleIds(guildId);
       const pingLine = pingRoleIds.length
@@ -121,13 +125,13 @@ module.exports = {
         embeds: [buildJugementEmbed(draft)],
       });
 
-      // 2) Rappel photos (manuel) si activé
+      // 2) Rappel photos manuel (si ON)
       if (draft.manualPhotosReminder) {
         await channel.send({
           content:
             "📎 **Photos à ajouter (manuel)**\n" +
-            "➡️ Merci d’envoyer **les photos du casier judiciaire** + **photo de l’individu** **en réponse au dossier juste au-dessus**.\n" +
-            "✅ (Les previews s’afficheront automatiquement.)",
+            "➡️ Merci d’envoyer **les photos du casier judiciaire** + **photo de l’individu** **en réponse au dossier** (juste au-dessus).\n" +
+            "✅ Les previews s’afficheront automatiquement.",
           reply: { messageReference: dossierMsg.id },
           allowedMentions: { repliedUser: false },
         });
@@ -142,13 +146,8 @@ module.exports = {
       });
     }
 
-    // fallback
     return interaction.reply({ content: "❌ Action inconnue.", ephemeral: true });
   },
-};
 
-// export pour modals/dojModals.js
-module.exports.wizardComponents = (userId) => {
-  // Comme les modals n'ont pas draft en param, on fera un rendu par défaut OFF
-  return wizardComponents(userId, { manualPhotosReminder: false });
+  wizardComponents,
 };

@@ -5,7 +5,7 @@ const { wizardComponents } = require("../buttons/dojButtons");
 
 /**
  * Lecture safe d’un champ modal :
- * - si le champ n'existe pas => retourne ""
+ * - si le champ n'existe pas => ""
  * - évite les crashs si customId différent
  */
 function safeVal(interaction, customId) {
@@ -36,22 +36,14 @@ module.exports = {
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
 
-    // ✅ Modal principal
+    // Modal principal
     if (action === "main") {
-      // IMPORTANT : ces IDs doivent matcher ceux du modal dans la commande.
-      // (Je mets les 2 variantes au cas où tu avais déjà un autre nom)
-      const suspect = safeVal(interaction, "suspect") || safeVal(interaction, "nomSuspect");
+      // IDs attendus (match la commande /demande-jugement)
+      const suspect = safeVal(interaction, "suspect");
       const ppa = safeVal(interaction, "ppa");
       const faits = safeVal(interaction, "faits");
-      const agentsPresents =
-        safeVal(interaction, "agentsPresents") ||
-        safeVal(interaction, "agentsPresent") ||
-        safeVal(interaction, "agents") ||
-        safeVal(interaction, "present");
-      const rapport =
-        safeVal(interaction, "rapport") ||
-        safeVal(interaction, "rapportArrestation") ||
-        safeVal(interaction, "rapportArrest");
+      const agentsPresents = safeVal(interaction, "agentsPresents");
+      const rapport = safeVal(interaction, "rapport");
 
       const draft = {
         openedAt: new Date().toISOString(),
@@ -65,9 +57,8 @@ module.exports = {
 
         nbCasiers: "",
 
-        // Uploads (pièces jointes)
-        photoCasierUrls: [],
-        photoIndividuUrls: [],
+        // OFF par défaut
+        manualPhotosReminder: false,
       };
 
       setDraft(guildId, userId, draft);
@@ -76,14 +67,13 @@ module.exports = {
         ephemeral: true,
         content:
           "✅ Étape 1 enregistrée.\n" +
-          "➡️ Clique sur **Upload casier / Upload individu** puis envoie les images dans le salon.\n" +
-          "Ensuite clique **Valider et envoyer**.",
+          "Tu peux activer **Photos manuelles** (ON) si tu veux que le bot poste un rappel sous le dossier.",
         embeds: [buildJugementEmbed(draft)],
-        components: wizardComponents(userId),
+        components: wizardComponents(userId, draft),
       });
     }
 
-    // ✅ Modal nb casiers
+    // Modal nb casiers
     if (action === "nbcasiers") {
       const existing = getDraft(guildId, userId);
       if (!existing) {
@@ -93,14 +83,14 @@ module.exports = {
         });
       }
 
-      const nb = safeVal(interaction, "nbCasiers") || safeVal(interaction, "nb");
+      const nb = safeVal(interaction, "nbCasiers");
       const updated = updateDraft(guildId, userId, { nbCasiers: nb });
 
       return interaction.reply({
         ephemeral: true,
         content: "✅ Nombre de casiers mis à jour.",
         embeds: [buildJugementEmbed(updated)],
-        components: wizardComponents(userId),
+        components: wizardComponents(userId, updated),
       });
     }
 
