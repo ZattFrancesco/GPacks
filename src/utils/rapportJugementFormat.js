@@ -1,13 +1,8 @@
 // src/utils/rapportJugementFormat.js
+const { EmbedBuilder } = require("discord.js");
 
 /**
- * Convertit une date saisie dans le modal en timestamp UNIX (secondes).
- * Accepte :
- * - vide -> maintenant
- * - "1735689600" (timestamp)
- * - "<t:1735689600>" ou "<t:1735689600:F>"
- * - "2025-12-31 18:00"
- * - "2025-12-31"
+ * Convertit une date saisie en timestamp UNIX
  */
 function parseJudgementDate(raw) {
   const now = Math.floor(Date.now() / 1000);
@@ -16,68 +11,66 @@ function parseJudgementDate(raw) {
   const s = String(raw).trim();
   if (!s) return now;
 
-  // <t:1234567890> ou <t:1234567890:F>
   const m = s.match(/<t:(\d{9,12})(?::[a-zA-Z])?>/);
   if (m) return Number(m[1]);
 
-  // timestamp brut
   if (/^\d{9,12}$/.test(s)) return Number(s);
 
-  // date texte
-  // accepte "YYYY-MM-DD" ou "YYYY-MM-DD HH:mm"
-  const normalized = s.replace("T", " ").trim();
-  const d = new Date(normalized);
-
+  const d = new Date(s.replace("T", " "));
   if (!Number.isNaN(d.getTime())) {
     return Math.floor(d.getTime() / 1000);
   }
 
-  // fallback -> maintenant
   return now;
 }
 
-function yn(v) {
-  return v ? "Oui" : "Non";
-}
-
-function safeText(v, fallback = "/") {
+function safe(v, fallback = "/") {
   const t = (v ?? "").toString().trim();
   return t.length ? t : fallback;
 }
 
 /**
- * Génère ton pattern texte final.
+ * Génère l'embed du rapport
  */
-function formatRapportJugement(payload) {
-  const ts = payload.dateJugement || Math.floor(Date.now() / 1000);
+function buildRapportJugementEmbed(payload) {
+  const ts = payload.dateJugement;
 
-  return [
-    "-----",
-    "-----",
-    "-----",
-    "",
-    `Nom: ${safeText(payload.nom, "à Remplir")}`,
-    `Prénom: ${safeText(payload.prenom, "à Remplir")}`,
-    "",
-    `Date de jugement : <t:${ts}:F>`,
-    "",
-    `Juge : ${safeText(payload.juge, "à Remplir")}`,
-    `Procureur : ${safeText(payload.procureur, "à Remplir")}`,
-    `Avocat : ${safeText(payload.avocat, "à Remplir")}`,
-    "",
-    `Peine : ${safeText(payload.peine, "à Remplir")}`,
-    `Amande : ${safeText(payload.amende, "à Remplir")}`,
-    `T.I.G. : ${yn(!!payload.tig)}`,
-    `Entreprise T.I.G. : ${safeText(payload.tigEntreprise, "/")}`,
-    "",
-    `Observation : ${safeText(payload.observation, "à Remplir")}`,
-    "-----",
-    "-----",
-    "-----",
-  ].join("\n");
+  return new EmbedBuilder()
+    .setTitle("📄 Rapport de Jugement")
+    .setColor(0x2b2d31)
+    .addFields(
+      {
+        name: "👤 Identité",
+        value:
+          `**Nom :** ${safe(payload.nom)}\n` +
+          `**Prénom :** ${safe(payload.prenom)}\n` +
+          `**Date de jugement :** <t:${ts}:F>`,
+      },
+      {
+        name: "⚖️ Rôles",
+        value:
+          `**Juge :** ${safe(payload.juge)}\n` +
+          `**Procureur :** ${safe(payload.procureur)}\n` +
+          `**Avocat :** ${safe(payload.avocat)}`,
+      },
+      {
+        name: "⛓️ Sanctions",
+        value:
+          `**Peine :** ${safe(payload.peine)}\n` +
+          `**Amende :** ${safe(payload.amende)}\n` +
+          `**T.I.G. :** ${payload.tig ? "Oui" : "Non"}\n` +
+          `**Entreprise T.I.G. :** ${safe(payload.tigEntreprise)}`,
+      },
+      {
+        name: "📝 Observation",
+        value: safe(payload.observation, "Aucune"),
+      }
+    )
+    .setFooter({ text: "DOJ Helper • Rapport judiciaire" })
+    .setTimestamp(ts * 1000);
 }
 
 module.exports = {
   parseJudgementDate,
-  formatRapportJugement,
+  buildRapportJugementEmbed,
 };

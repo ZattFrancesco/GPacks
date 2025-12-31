@@ -2,7 +2,7 @@
 
 const { updateDraft, getDraft, clearDraft } = require("../src/utils/rjDrafts");
 const { panel } = require("../buttons/rapportJugementButtons");
-const { parseJudgementDate, formatRapportJugement } = require("../src/utils/rapportJugementFormat");
+const { parseJudgementDate, buildRapportJugementEmbed } = require("../src/utils/rapportJugementFormat");
 const { ensureTables, insertReport } = require("../services/rapportJugement.db");
 
 function safeVal(interaction, id) {
@@ -25,7 +25,6 @@ module.exports = {
 
     await ensureTables();
 
-    // STEP 1
     if (step === "step1") {
       updateDraft(interaction.guildId, userId, {
         nom: safeVal(interaction, "nom"),
@@ -40,7 +39,6 @@ module.exports = {
       });
     }
 
-    // STEP 2
     if (step === "step2") {
       updateDraft(interaction.guildId, userId, {
         juge: safeVal(interaction, "juge"),
@@ -55,7 +53,7 @@ module.exports = {
       });
     }
 
-    // STEP 3 FINAL
+    // FINAL
     if (step === "step3") {
       const draft = getDraft(interaction.guildId, userId);
       if (!draft) {
@@ -87,7 +85,13 @@ module.exports = {
         observation: safeVal(interaction, "observation"),
       };
 
-      await interaction.reply({ content: formatRapportJugement(payload) });
+      const embed = buildRapportJugementEmbed(payload);
+
+      await interaction.reply({
+        content: `🆕 **Nouveau Rapport par <@${interaction.user.id}>**`,
+        embeds: [embed],
+      });
+
       await insertReport(payload);
       clearDraft(interaction.guildId, userId);
     }
