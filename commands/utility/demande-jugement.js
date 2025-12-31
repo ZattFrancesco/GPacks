@@ -1,66 +1,70 @@
+// commands/utility/demande-jugement.js
 const {
   SlashCommandBuilder,
   ModalBuilder,
+  ActionRowBuilder,
   TextInputBuilder,
   TextInputStyle,
-  ActionRowBuilder,
+  PermissionFlagsBits,
 } = require("discord.js");
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("demande-jugement")
-    .setDescription("Ouvrir un dossier de demande de jugement"),
+    .setDescription("Ouvrir une demande de jugement (assistant)")
+    // tu peux retirer si tu veux le rendre public
+    .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
 
   async execute(interaction) {
-    const customId = `doj:main:${interaction.user.id}`;
+    const userId = interaction.user.id;
 
     const modal = new ModalBuilder()
-      .setCustomId(customId)
-      .setTitle("Demande de jugement (1/2)");
+      .setCustomId(`doj:main:${userId}`)
+      .setTitle("Demande de jugement (1/1)");
 
     const suspect = new TextInputBuilder()
       .setCustomId("suspect")
       .setLabel("Nom prénom du suspect")
       .setStyle(TextInputStyle.Short)
       .setRequired(true)
-      .setMaxLength(80);
+      .setMaxLength(60);
 
     const ppa = new TextInputBuilder()
       .setCustomId("ppa")
-      .setLabel("PPA (ex: Sans PPA / Avec PPA)")
+      .setLabel("PPA (ex: Sans PPA / PPA 4)")
       .setStyle(TextInputStyle.Short)
       .setRequired(true)
       .setMaxLength(40);
 
     const faits = new TextInputBuilder()
       .setCustomId("faits")
-      .setLabel("Faits reprochés (séparés par virgules)")
+      .setLabel("Faits reprochés (sépare par des virgules)")
       .setStyle(TextInputStyle.Paragraph)
       .setRequired(true)
-      .setMaxLength(1000);
+      .setMaxLength(900);
 
-    const agents = new TextInputBuilder()
-      .setCustomId("agents")
-      .setLabel("Agent(s) présent(s) (mentions ou texte)")
+    const agentsPresents = new TextInputBuilder()
+      .setCustomId("agentsPresents")
+      .setLabel("Agent(s) présent(s) (mentions ou noms)")
       .setStyle(TextInputStyle.Short)
       .setRequired(false)
-      .setMaxLength(500);
+      .setMaxLength(150);
 
     const rapport = new TextInputBuilder()
       .setCustomId("rapport")
       .setLabel("Rapport d'arrestation")
       .setStyle(TextInputStyle.Paragraph)
       .setRequired(true)
-      .setMaxLength(1500);
+      .setMaxLength(900);
 
     modal.addComponents(
       new ActionRowBuilder().addComponents(suspect),
       new ActionRowBuilder().addComponents(ppa),
       new ActionRowBuilder().addComponents(faits),
-      new ActionRowBuilder().addComponents(agents),
-      new ActionRowBuilder().addComponents(rapport)
+      new ActionRowBuilder().addComponents(agentsPresents),
+      new ActionRowBuilder().addComponents(rapport),
     );
 
-    return interaction.showModal(modal);
+    await interaction.showModal(modal);
   },
 };

@@ -1,12 +1,20 @@
 // modals/dojModals.js
-const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require("discord.js");
 const { setDraft, getDraft, updateDraft } = require("../src/utils/dojDrafts");
 const { buildJugementEmbed } = require("../src/utils/jugementEmbed");
 const { wizardComponents } = require("../buttons/dojButtons");
 
+/**
+ * Lecture safe d’un champ modal :
+ * - si le champ n'existe pas => retourne ""
+ * - évite les crashs si customId différent
+ */
 function safeVal(interaction, customId) {
-  const v = interaction.fields.getTextInputValue(customId);
-  return (v ?? "").trim();
+  try {
+    const v = interaction.fields.getTextInputValue(customId);
+    return (v ?? "").trim();
+  } catch {
+    return "";
+  }
 }
 
 module.exports = {
@@ -28,12 +36,22 @@ module.exports = {
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
 
+    // ✅ Modal principal
     if (action === "main") {
-      const suspect = safeVal(interaction, "suspect");
+      // IMPORTANT : ces IDs doivent matcher ceux du modal dans la commande.
+      // (Je mets les 2 variantes au cas où tu avais déjà un autre nom)
+      const suspect = safeVal(interaction, "suspect") || safeVal(interaction, "nomSuspect");
       const ppa = safeVal(interaction, "ppa");
       const faits = safeVal(interaction, "faits");
-      const agentsPresents = safeVal(interaction, "agentsPresents");
-      const rapport = safeVal(interaction, "rapport");
+      const agentsPresents =
+        safeVal(interaction, "agentsPresents") ||
+        safeVal(interaction, "agentsPresent") ||
+        safeVal(interaction, "agents") ||
+        safeVal(interaction, "present");
+      const rapport =
+        safeVal(interaction, "rapport") ||
+        safeVal(interaction, "rapportArrestation") ||
+        safeVal(interaction, "rapportArrest");
 
       const draft = {
         openedAt: new Date().toISOString(),
@@ -47,27 +65,26 @@ module.exports = {
 
         nbCasiers: "",
 
-        // On stocke des listes (casier peut avoir plusieurs images)
+        // Uploads (pièces jointes)
         photoCasierUrls: [],
         photoIndividuUrls: [],
       };
 
       setDraft(guildId, userId, draft);
 
-      const preview = buildJugementEmbed(draft);
-
       return interaction.reply({
         ephemeral: true,
         content:
           "✅ Étape 1 enregistrée.\n" +
-          "Utilise les boutons pour uploader les photos (tu envoies juste les images dans le salon), puis clique **Valider et envoyer**.",
-        embeds: [preview],
+          "➡️ Clique sur **Upload casier / Upload individu** puis envoie les images dans le salon.\n" +
+          "Ensuite clique **Valider et envoyer**.",
+        embeds: [buildJugementEmbed(draft)],
         components: wizardComponents(userId),
       });
     }
 
+    // ✅ Modal nb casiers
     if (action === "nbcasiers") {
-      const nb = safeVal(interaction, "nbCasiers");
       const existing = getDraft(guildId, userId);
       if (!existing) {
         return interaction.reply({
@@ -76,18 +93,17 @@ module.exports = {
         });
       }
 
+      const nb = safeVal(interaction, "nbCasiers") || safeVal(interaction, "nb");
       const updated = updateDraft(guildId, userId, { nbCasiers: nb });
-      const preview = buildJugementEmbed(updated);
 
       return interaction.reply({
         ephemeral: true,
         content: "✅ Nombre de casiers mis à jour.",
-        embeds: [preview],
+        embeds: [buildJugementEmbed(updated)],
         components: wizardComponents(userId),
       });
     }
 
-    // Si customId inconnu
     return interaction.reply({ content: "❌ Modal inconnu.", ephemeral: true });
   },
 };
