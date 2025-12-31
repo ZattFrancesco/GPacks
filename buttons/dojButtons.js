@@ -12,6 +12,9 @@ const db = require("../services/jugement.db");
 const { getDraft, updateDraft, clearDraft } = require("../src/utils/dojDrafts");
 const { buildJugementEmbed } = require("../src/utils/jugementEmbed");
 
+/**
+ * UI du wizard
+ */
 function wizardComponents(userId) {
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -42,6 +45,9 @@ function wizardComponents(userId) {
   return [row1, row2];
 }
 
+/**
+ * Attend le prochain message du user dans le salon avec au moins 1 pièce jointe.
+ */
 async function waitForAttachment(channel, userId, ms = 60_000) {
   return new Promise((resolve) => {
     const collector = channel.createMessageCollector({
@@ -66,16 +72,15 @@ async function tryDeleteMessage(message) {
   try {
     await message.delete();
   } catch {
-    // ignore
+    // ignore (pas de perms / message trop vieux / etc.)
   }
 }
 
 function extractAttachmentUrls(message) {
   if (!message?.attachments?.size) return [];
-  const urls = [...message.attachments.values()]
+  return [...message.attachments.values()]
     .map((a) => a.url)
     .filter((u) => typeof u === "string" && /^https?:\/\/\S+$/i.test(u));
-  return urls;
 }
 
 function uniq(arr) {
@@ -89,6 +94,7 @@ module.exports = {
     const [prefix, action, ownerId] = interaction.customId.split(":");
     if (prefix !== "doj") return;
 
+    // Sécurité : seul le créateur du wizard peut cliquer
     if (ownerId && interaction.user.id !== ownerId) {
       return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
     }
@@ -101,6 +107,7 @@ module.exports = {
       return interaction.reply({ content: "❌ Salon introuvable.", ephemeral: true });
     }
 
+    // Annuler
     if (action === "cancel") {
       clearDraft(guildId, userId);
       return interaction.update({ content: "✅ Demande annulée.", embeds: [], components: [] });
@@ -114,6 +121,7 @@ module.exports = {
       });
     }
 
+    // Modal "nb casiers"
     if (action === "nbCasiers") {
       const modal = new ModalBuilder()
         .setCustomId(`doj:nbcasiers:${userId}`)
@@ -131,7 +139,7 @@ module.exports = {
       return interaction.showModal(modal);
     }
 
-    // --- Upload Casier / Individu : on stocke les URLs CDN DIRECTES des attachments
+    // Upload casier / individu => on stocke les URL CDN des attachments
     if (action === "uploadCasier" || action === "uploadIndividu") {
       const isCasier = action === "uploadCasier";
       const what = isCasier ? "casier" : "individu";
@@ -153,7 +161,7 @@ module.exports = {
 
       const urls = extractAttachmentUrls(msg);
 
-      // On supprime le message de l'agent (si possible) pour garder le salon clean
+      // On essaye de supprimer le message de l’agent pour garder le salon clean
       await tryDeleteMessage(msg);
 
       const next = isCasier
@@ -172,29 +180,29 @@ module.exports = {
       });
     }
 
-    // --- Envoi final : 1 message embed + 1 message avec URL BRUTES SEULES
+    // Envoi final : 1 message embed, puis 1 (ou 2) messages URL-ONLY => previews garanties
     if (action === "send") {
       const pingRoleIds = await db.getPingRoleIds(guildId);
-
       const pingLine = pingRoleIds.length
         ? `|| ${pingRoleIds.map((id) => `<@&${id}>`).join(" ")} ||`
         : null;
 
-      // 1) dossier
+      // 1) Message dossier
       await channel.send({
         content: pingLine || undefined,
         embeds: [buildJugementEmbed(draft)],
       });
 
-      // 2) photos : on fait 2 messages "URL-only" (zero texte autour) => preview fiable
+      // 2) Photos en URL BRUTES SEULES (une par ligne)
+      //    ⚠️ PAS de texte autour, sinon Discord peut ne pas preview.
       const casierUrls = uniq(draft.photoCasierUrls).filter((u) => /^https?:\/\/\S+$/i.test(u));
       const individuUrls = uniq(draft.photoIndividuUrls).filter((u) => /^https?:\/\/\S+$/i.test(u));
 
       if (casierUrls.length) {
-        await channel.send({ content: casierUrls.join("\n") }); // URL seules => preview
+        await channel.send({ content: casierUrls.join("\n") });
       }
       if (individuUrls.length) {
-        await channel.send({ content: individuUrls.join("\n") }); // URL seules => preview
+        await channel.send({ content: individuUrls.join("\n") });
       }
 
       clearDraft(guildId, userId);
