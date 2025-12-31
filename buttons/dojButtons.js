@@ -75,7 +75,11 @@ module.exports = {
         .setStyle(TextInputStyle.Short)
         .setRequired(false)
         .setMaxLength(10)
-        .setValue(draft.nbCasiers !== undefined && draft.nbCasiers !== null ? String(draft.nbCasiers).slice(0, 10) : "");
+        .setValue(
+          draft.nbCasiers !== undefined && draft.nbCasiers !== null
+            ? String(draft.nbCasiers).slice(0, 10)
+            : ""
+        );
 
       const photoIndividu = new TextInputBuilder()
         .setCustomId("photoIndividu")
@@ -96,9 +100,21 @@ module.exports = {
 
     if (action === "send") {
       const pingRoleIds = await db.getPingRoleIds(guildId);
-      const ping = pingRoleIds.length ? `|| ${pingRoleIds.map((id) => `<@&${id}>`).join(" ")} ||` : null;
+      const ping = pingRoleIds.length
+        ? `|| ${pingRoleIds.map((id) => `<@&${id}>`).join(" ")} ||`
+        : null;
 
       const embed = buildJugementEmbed(draft);
+
+      // ⚠️ Les liens doivent être en TEXTE PUR (content) pour déclencher les previews Discord.
+      const imageLines = [
+        draft.photoCasier ? `Photo casier judiciaire: ${draft.photoCasier}` : null,
+        draft.photoIndividu ? `Photo individu: ${draft.photoIndividu}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      const content = [ping, imageLines].filter(Boolean).join("\n\n");
 
       // Envoi dans le salon où l'agent est en train d'utiliser la commande
       const channel = interaction.channel;
@@ -106,7 +122,7 @@ module.exports = {
         return interaction.reply({ content: "❌ Salon introuvable.", ephemeral: true });
       }
 
-      await channel.send({ content: ping || undefined, embeds: [embed] });
+      await channel.send({ content: content || undefined, embeds: [embed] });
       clearDraft(guildId, userId);
 
       return interaction.update({ content: "✅ Dossier envoyé.", embeds: [], components: [] });

@@ -30,55 +30,43 @@ function formatBrussels(date) {
   };
 }
 
+function truncate(str, max) {
+  const s = String(str ?? "").trim();
+  if (!s) return "—";
+  if (s.length <= max) return s;
+  // 3 chars pour "..."
+  return `${s.slice(0, Math.max(0, max - 3))}...`;
+}
+
 /**
- * Construit l'embed "demande jugement" dans le style demandé.
- * On met le bloc principal dans un code block pour préserver les espaces/alignements.
+ * Construit l'embed "demande jugement" (sans codeblock) :
+ * - Les infos sont en fields (plus clean)
+ * - Les liens images doivent être envoyés en TEXTE PUR (content) pour afficher les previews.
  */
 function buildJugementEmbed(payload) {
   const openedAt = payload?.openedAt ? new Date(payload.openedAt) : new Date();
   const { dateStr, timeStr } = formatBrussels(openedAt);
 
-  const agentCharge = payload?.agentCharge || "";
-  const suspect = payload?.suspect || "";
-  const ppa = payload?.ppa || "";
-  const faits = payload?.faits || "";
-  const agentsPresents = payload?.agentsPresents || "";
-  const rapport = payload?.rapport || "";
-  const photoCasier = payload?.photoCasier || "";
-  const nbCasiers = payload?.nbCasiers ?? "";
-  const photoIndividu = payload?.photoIndividu || "";
-
-  const block = [
-    " -- DOSSIER --",
-    "",
-    `Agent(s) en charge:        ${agentCharge}`,
-    "",
-    `Nom prénom du suspect:    ${suspect}`,
-    `PPA:    ${ppa}`,
-    "",
-    `Faits reprochés:    ${faits}`,
-    `Agent(s) présent(s):            ${agentsPresents}`,
-    `Rapport d'arrestation:    ${rapport}`,
-    "",
-    "Photo casier judiciaire",
-    `Nombre de casier judiciaire:    ${nbCasiers}`,
-    `Photo individu :    ${photoIndividu}`,
-  ].join("\n");
-
-  const desc = [
-    `**------ * Ouvert le    ${dateStr}    à    ${timeStr} * ------**`,
-    "",
-    "```",
-    block,
-    "```",
-    photoCasier ? `**Photo casier judiciaire :** ${photoCasier}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const agentCharge = payload?.agentCharge;
+  const suspect = payload?.suspect;
+  const ppa = payload?.ppa;
+  const faits = payload?.faits;
+  const agentsPresents = payload?.agentsPresents;
+  const rapport = payload?.rapport;
+  const nbCasiers = payload?.nbCasiers;
 
   const embed = new EmbedBuilder()
     .setTitle("Demande de jugement")
-    .setDescription(desc)
+    .setDescription(`**-- DOSSIER --**\nOuvert le **${dateStr}** à **${timeStr}**`)
+    .addFields(
+      { name: "Agent(s) en charge", value: truncate(agentCharge, 1024), inline: false },
+      { name: "Nom / prénom du suspect", value: truncate(suspect, 1024), inline: true },
+      { name: "PPA", value: truncate(ppa, 1024), inline: true },
+      { name: "Faits reprochés", value: truncate(faits, 1024), inline: false },
+      { name: "Agent(s) présent(s)", value: truncate(agentsPresents, 1024), inline: false },
+      { name: "Rapport d’arrestation", value: truncate(rapport, 1024), inline: false },
+      { name: "Nombre de casier judiciaire", value: truncate(nbCasiers, 1024), inline: true }
+    )
     .setTimestamp(openedAt);
 
   return embed;
