@@ -211,22 +211,27 @@ async function listReports(guildId, sinceDate = null, limit = 200) {
 
   params.push(Number(limit) || 200);
 
-  const rows = await query(
-    `SELECT
-        id,
-        reporter_user_id,
-        created_at,
-        date_jugement_unix,
-        nom, prenom,
-        judge_name,
-        procureur,
-        avocat
-     FROM doj_jugement_reports
-     WHERE ${where}
-     ORDER BY created_at DESC
-     LIMIT ?`,
-    params
-  );
+const rows = await query(
+  `SELECT
+      id,
+      reporter_user_id,
+      created_at,
+      date_jugement_unix,
+      nom, prenom,
+      judge_name,
+      procureur,
+      avocat,
+      peine,
+      amende,
+      tig,
+      tig_entreprise,
+      observation
+   FROM doj_jugement_reports
+   WHERE ${where}
+   ORDER BY created_at DESC
+   LIMIT ?`,
+  params
+);
 
   return rows || [];
 }

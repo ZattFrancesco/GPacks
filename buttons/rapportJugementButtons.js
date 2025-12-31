@@ -75,7 +75,7 @@ module.exports = {
 
       const juge = new TextInputBuilder().setCustomId("juge").setLabel("Juge").setStyle(TextInputStyle.Short).setRequired(true);
       const procureur = new TextInputBuilder().setCustomId("procureur").setLabel("Procureur").setStyle(TextInputStyle.Short).setRequired(true);
-      const avocat = new TextInputBuilder().setCustomId("avocat").setLabel("Avocat").setStyle(TextInputStyle.Short).setRequired(true);
+      const avocat = new TextInputBuilder().setCustomId("avocat").setLabel("Avocat").setStyle(TextInputStyle.Short).setRequired(false);
 
       modal.addComponents(
         new ActionRowBuilder().addComponents(juge),
@@ -92,7 +92,7 @@ module.exports = {
         .setCustomId(`rj:step3:${ownerId}`)
         .setTitle("Rapport jugement - Étape 3/3");
 
-      const peine = new TextInputBuilder().setCustomId("peine").setLabel("Peine").setStyle(TextInputStyle.Paragraph).setRequired(true);
+      const peine = new TextInputBuilder().setCustomId("peine").setLabel("Peine").setStyle(TextInputStyle.Paragraph).setRequired(false);
       const amende = new TextInputBuilder().setCustomId("amende").setLabel("Amende").setStyle(TextInputStyle.Short).setRequired(false);
       const tig = new TextInputBuilder().setCustomId("tig").setLabel("T.I.G. (oui/non)").setStyle(TextInputStyle.Short).setRequired(true);
       const tigEntreprise = new TextInputBuilder().setCustomId("tigEntreprise").setLabel("Entreprise T.I.G.").setStyle(TextInputStyle.Short).setRequired(false);

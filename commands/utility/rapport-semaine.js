@@ -8,45 +8,55 @@ function safe(v, fallback = "/") {
   return t.length ? t : fallback;
 }
 
-// split lignes en fields (Discord limite value)
-function chunkLinesIntoFields(lines, maxValueLen = 950) {
+function cut(str, max = 120) {
+  const s = safe(str, "/");
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1) + "…";
+}
+
+// Split en fields (value max ~1024, on garde marge)
+function chunkBlocksIntoFields(blocks, maxLen = 950) {
   const fields = [];
   let current = "";
 
-  for (const line of lines) {
-    // +1 pour \n
-    if ((current + (current ? "\n" : "") + line).length > maxValueLen) {
-      fields.push(current);
-      current = line;
+  for (const b of blocks) {
+    const next = current ? current + "\n\n" + b : b;
+    if (next.length > maxLen) {
+      if (current) fields.push(current);
+      current = b;
     } else {
-      current = current ? current + "\n" + line : line;
+      current = next;
     }
   }
   if (current) fields.push(current);
   return fields;
 }
 
+// format "Oui/Non"
+function yn(v) {
+  return v ? "Oui" : "Non";
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("rapport-semaine")
-    .setDescription("Affiche la liste des rapports depuis le dernier reset (format paie)")
+    .setDescription("Liste détaillée des rapports de Jugements")
     .addIntegerOption(opt =>
       opt.setName("limit")
-        .setDescription("Nombre max de rapports à afficher (défaut 50, max 200)")
+        .setDescription("Nombre max de rapports à afficher (défaut 30, max 120)")
         .setRequired(false)
     ),
 
   async execute(interaction) {
-    const limit = Math.min(Math.max(interaction.options.getInteger("limit") ?? 50, 1), 200);
+    const limit = Math.min(Math.max(interaction.options.getInteger("limit") ?? 30, 1), 120);
 
-    // récupère dernier reset
     const lastReset = await getLastReset(interaction.guildId);
     const sinceDate = lastReset?.reset_at ? new Date(lastReset.reset_at) : null;
 
     const total = await getReportCount(interaction.guildId, sinceDate);
     const rows = await listReports(interaction.guildId, sinceDate, limit);
 
-    // récupère les noms des reporters (en batch simple)
+    // fetch reporters names
     const uniqueReporterIds = [...new Set(rows.map(r => String(r.reporter_user_id)).filter(Boolean))];
 
     const reporterNameMap = new Map();
@@ -62,38 +72,54 @@ module.exports = {
     );
 
     const header = lastReset?.reset_at
-      ? `Stats depuis le dernier reset : <t:${Math.floor(new Date(lastReset.reset_at).getTime() / 1000)}:F>`
-      : "Aucun reset enregistré : stats depuis le début.";
+      ? `Depuis le reset : <t:${Math.floor(new Date(lastReset.reset_at).getTime() / 1000)}:F>`
+      : "Aucun reset : depuis le début.";
 
     const embed = new EmbedBuilder()
-      .setTitle("📋 Rapports de jugement (semaine)")
-      .setDescription(`${header}\n\n**Total période : ${total}** • **Affichés : ${rows.length}/${limit}**`)
+      .setTitle("🧾 Rapports de jugement de la semaine")
+      .setDescription(`${header}\n**Total période : ${total}** • **Affichés : ${rows.length}/${limit}**`)
       .setColor(0x2b2d31);
 
     if (!rows.length) {
-      embed.addFields({ name: "Field 1", value: "_Aucun rapport sur la période._" });
+      embed.addFields({ name: "Rapports", value: "_Aucun rapport sur la période._" });
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
-    const lines = rows.map((r) => {
+    const blocks = rows.map((r) => {
       const ts = r.date_jugement_unix
         ? Number(r.date_jugement_unix)
         : Math.floor(new Date(r.created_at).getTime() / 1000);
 
-      const datePart = `*<t:${ts}:d>*`;
-      const ident = `*${safe(r.nom)} ${safe(r.prenom)}*`;
-      const juge = `*${safe(r.judge_name)}*`;
-      const proc = `*${safe(r.procureur)}*`;
+      const suspect = `${safe(r.nom)} ${safe(r.prenom)}`;
+
+      const juge = safe(r.judge_name);
+      const proc = safe(r.procureur);
+      const avocat = safe(r.avocat);
+
+      const peine = cut(r.peine, 80);
+      const amende = cut(r.amende, 40);
+
+      const tigOui = Number(r.tig) === 1;
+      const tigEnt = tigOui ? safe(r.tig_entreprise) : "/";
+
+      const obs = cut(r.observation, 140);
+
       const by = reporterNameMap.get(String(r.reporter_user_id)) || `<@${r.reporter_user_id}>`;
 
-      return `${datePart} - ${ident} - ${juge} - ${proc} - Enregistré par *${by}*`;
+      return [
+        `🗓️ **Date**: <t:${ts}:d> • 👤 **Suspect**: **${suspect}**`,
+        `⚖️ **Juge**: ${juge} • 🧑‍⚖️ **Proc**: ${proc} • 🧑‍💼 **Avocat**: ${avocat}`,
+        `💰 **Peine**: ${peine} • **Amende**: ${amende} • **TIG**: ${yn(tigOui)}${tigOui ? ` (**${tigEnt}**)` : ""}`,
+        `📝 **Obs**: ${obs}`,
+        `✍️ **Enregistré par**: **${by}**`,
+      ].join("\n");
     });
 
-    const chunks = chunkLinesIntoFields(lines);
+    const fields = chunkBlocksIntoFields(blocks);
 
-    chunks.forEach((value, idx) => {
+    fields.forEach((value, idx) => {
       embed.addFields({
-        name: `Field ${idx + 1}`,
+        name: `Rapports (${idx + 1}/${fields.length})`,
         value,
       });
     });
