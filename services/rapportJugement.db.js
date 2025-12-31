@@ -1,6 +1,4 @@
 // services/rapportJugement.db.js
-// Stockage des rapports de jugement + resets hebdomadaires (sans supprimer l'historique)
-
 const { query } = require("./db");
 
 let ensured = false;
@@ -51,7 +49,8 @@ async function ensureTables() {
 
       PRIMARY KEY (id),
       INDEX idx_guild_created (guild_id, created_at),
-      INDEX idx_guild_judgekey (guild_id, judge_key)
+      INDEX idx_guild_judgekey (guild_id, judge_key),
+      INDEX idx_guild_datejug (guild_id, date_jugement_unix)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
 
@@ -67,11 +66,6 @@ async function ensureTables() {
   `);
 }
 
-/**
- * Dernier reset de semaine
- * @param {string} guildId
- * @returns {Promise<{reset_at: Date} | null>}
- */
 async function getLastReset(guildId) {
   if (!guildId) return null;
   await ensureTables();
@@ -86,11 +80,6 @@ async function getLastReset(guildId) {
   return rows?.[0] || null;
 }
 
-/**
- * Ajoute un reset (sans effacer l'historique)
- * @param {string} guildId
- * @param {string} userId
- */
 async function addWeekReset(guildId, userId) {
   await ensureTables();
   if (!guildId || !userId) return;
@@ -100,15 +89,9 @@ async function addWeekReset(guildId, userId) {
   );
 }
 
-/**
- * Insert rapport de jugement
- * Accepte payload camelCase (guildId, reporterUserId, dateJugement...) OU snake_case.
- * @param {object} data
- */
 async function insertReport(data) {
   await ensureTables();
 
-  // ✅ compat camelCase / snake_case
   const guild_id = data.guild_id ?? data.guildId;
   const reporter_user_id = data.reporter_user_id ?? data.reporterUserId;
 
@@ -121,7 +104,6 @@ async function insertReport(data) {
     data.dateJugement ??
     null;
 
-  // juge : si mention, on stocke user_id + key U:ID
   const judgeInput = data.judge_name ?? data.judgeName ?? data.juge ?? "";
   const judge_user_id =
     data.judge_user_id ?? data.judgeUserId ?? extractUserId(judgeInput);
@@ -146,7 +128,6 @@ async function insertReport(data) {
 
   const observation = data.observation ?? null;
 
-  // sécurité : si un champ obligatoire manque, on refuse au lieu d'insérer du vide
   if (!guild_id || !reporter_user_id || !nom || !prenom || !judge_key) {
     throw new Error(
       `insertReport: champs manquants (guild_id=${guild_id}, reporter=${reporter_user_id}, nom=${nom}, prenom=${prenom}, judge_key=${judge_key})`
@@ -181,12 +162,6 @@ async function insertReport(data) {
   );
 }
 
-/**
- * Stats par juge (alltime ou depuis une date)
- * @param {string} guildId
- * @param {Date|null} sinceDate
- * @returns {Promise<Array<{judge_key:string, judge_user_id:string|null, judge_name:string, cnt:number}>>}
- */
 async function getCountsByJudge(guildId, sinceDate = null) {
   if (!guildId) return [];
   await ensureTables();
@@ -219,10 +194,74 @@ async function getCountsByJudge(guildId, sinceDate = null) {
   }));
 }
 
+/**
+ * ✅ NOUVEAU : liste des rapports (pour paie fin de semaine)
+ */
+async function listReports(guildId, sinceDate = null, limit = 200) {
+  if (!guildId) return [];
+  await ensureTables();
+
+  const params = [guildId];
+  let where = "guild_id = ?";
+
+  if (sinceDate) {
+    where += " AND created_at >= ?";
+    params.push(sinceDate);
+  }
+
+  params.push(Number(limit) || 200);
+
+  const rows = await query(
+    `SELECT
+        id,
+        reporter_user_id,
+        created_at,
+        date_jugement_unix,
+        nom, prenom,
+        judge_name,
+        procureur,
+        avocat
+     FROM doj_jugement_reports
+     WHERE ${where}
+     ORDER BY created_at DESC
+     LIMIT ?`,
+    params
+  );
+
+  return rows || [];
+}
+
+/**
+ * ✅ NOUVEAU : nombre de rapports sur la période
+ */
+async function getReportCount(guildId, sinceDate = null) {
+  if (!guildId) return 0;
+  await ensureTables();
+
+  const params = [guildId];
+  let where = "guild_id = ?";
+
+  if (sinceDate) {
+    where += " AND created_at >= ?";
+    params.push(sinceDate);
+  }
+
+  const rows = await query(
+    `SELECT COUNT(*) AS cnt
+     FROM doj_jugement_reports
+     WHERE ${where}`,
+    params
+  );
+
+  return Number(rows?.[0]?.cnt || 0);
+}
+
 module.exports = {
   ensureTables,
   getLastReset,
   addWeekReset,
   insertReport,
   getCountsByJudge,
+  listReports,
+  getReportCount,
 };
