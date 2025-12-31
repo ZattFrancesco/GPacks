@@ -70,29 +70,16 @@ async function tryDeleteMessage(message) {
   }
 }
 
-/**
- * ✅ Reposte les fichiers envoyés par l'agent via le bot
- * pour obtenir des URLs CDN stables (cdn.discordapp.com)
- */
-async function repostAttachmentsForCdn(channel, message, label) {
-  const files = [...message.attachments.values()].map((a) => ({
-    attachment: a.url,
-    name: a.name || "image",
-  }));
-
-  if (!files.length) return [];
-
-  // On reposte dans le salon, et on récupère les URLs CDN générées.
-  const sent = await channel.send({
-    content: label || undefined,
-    files,
-  });
-
-  return [...sent.attachments.values()].map((a) => a.url);
+function extractAttachmentUrls(message) {
+  if (!message?.attachments?.size) return [];
+  const urls = [...message.attachments.values()]
+    .map((a) => a.url)
+    .filter((u) => typeof u === "string" && /^https?:\/\/\S+$/i.test(u));
+  return urls;
 }
 
-function onlyHttpUrls(arr) {
-  return (arr || []).filter((u) => typeof u === "string" && /^https?:\/\/\S+$/i.test(u));
+function uniq(arr) {
+  return [...new Set((arr || []).filter(Boolean))];
 }
 
 module.exports = {
@@ -144,6 +131,7 @@ module.exports = {
       return interaction.showModal(modal);
     }
 
+    // --- Upload Casier / Individu : on stocke les URLs CDN DIRECTES des attachments
     if (action === "uploadCasier" || action === "uploadIndividu") {
       const isCasier = action === "uploadCasier";
       const what = isCasier ? "casier" : "individu";
@@ -163,34 +151,28 @@ module.exports = {
         });
       }
 
+      const urls = extractAttachmentUrls(msg);
+
       // On supprime le message de l'agent (si possible) pour garder le salon clean
       await tryDeleteMessage(msg);
 
-      // ✅ Le bot reposte les images => URLs CDN garanties
-      const cdnUrls = await repostAttachmentsForCdn(
-        channel,
-        msg,
-        isCasier ? "Photo casier judiciaire:" : "Photo individu:"
-      );
-
-      const safeUrls = onlyHttpUrls(cdnUrls);
-
       const next = isCasier
         ? updateDraft(guildId, userId, {
-            photoCasierUrls: [...(draft.photoCasierUrls || []), ...safeUrls],
+            photoCasierUrls: uniq([...(draft.photoCasierUrls || []), ...urls]),
           })
         : updateDraft(guildId, userId, {
-            photoIndividuUrls: [...(draft.photoIndividuUrls || []), ...safeUrls],
+            photoIndividuUrls: uniq([...(draft.photoIndividuUrls || []), ...urls]),
           });
 
       return interaction.followUp({
         ephemeral: true,
-        content: `✅ ${what} enregistré (${safeUrls.length} image(s)).`,
+        content: `✅ ${what} enregistré (${urls.length} image(s)).`,
         embeds: [buildJugementEmbed(next)],
         components: wizardComponents(userId),
       });
     }
 
+    // --- Envoi final : 1 message embed + 1 message avec URL BRUTES SEULES
     if (action === "send") {
       const pingRoleIds = await db.getPingRoleIds(guildId);
 
@@ -198,31 +180,21 @@ module.exports = {
         ? `|| ${pingRoleIds.map((id) => `<@&${id}>`).join(" ")} ||`
         : null;
 
-      // 1) Message principal : ping + embed
+      // 1) dossier
       await channel.send({
         content: pingLine || undefined,
         embeds: [buildJugementEmbed(draft)],
       });
 
-      // 2) Message URLs brutes seules (preview fiable)
-      const casierUrls = onlyHttpUrls(draft.photoCasierUrls);
-      const individuUrls = onlyHttpUrls(draft.photoIndividuUrls);
-
-      const blocks = [];
+      // 2) photos : on fait 2 messages "URL-only" (zero texte autour) => preview fiable
+      const casierUrls = uniq(draft.photoCasierUrls).filter((u) => /^https?:\/\/\S+$/i.test(u));
+      const individuUrls = uniq(draft.photoIndividuUrls).filter((u) => /^https?:\/\/\S+$/i.test(u));
 
       if (casierUrls.length) {
-        blocks.push("Photo casier judiciaire:");
-        blocks.push(casierUrls.join("\n")); // URL seules
+        await channel.send({ content: casierUrls.join("\n") }); // URL seules => preview
       }
       if (individuUrls.length) {
-        if (blocks.length) blocks.push("");
-        blocks.push("Photo individu:");
-        blocks.push(individuUrls.join("\n"));
-      }
-
-      const photosContent = blocks.join("\n").trim();
-      if (photosContent) {
-        await channel.send({ content: photosContent });
+        await channel.send({ content: individuUrls.join("\n") }); // URL seules => preview
       }
 
       clearDraft(guildId, userId);
