@@ -11,36 +11,19 @@ const {
 
 const { getDraft, clearDraft } = require("../src/utils/rjDrafts");
 
-function panel(ownerId, step) {
-  const row = new ActionRowBuilder();
-
-  if (step === 1) {
-    row.addComponents(
+function panel(ownerId) {
+  return [
+    new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`rjbtn:open2:${ownerId}`)
-        .setLabel("➡️ Étape 2")
+        .setCustomId(`rjbtn:continue:${ownerId}`)
+        .setLabel("➡️ Continuer")
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setCustomId(`rjbtn:cancel:${ownerId}`)
         .setLabel("❌ Annuler")
         .setStyle(ButtonStyle.Danger)
-    );
-  }
-
-  if (step === 2) {
-    row.addComponents(
-      new ButtonBuilder()
-        .setCustomId(`rjbtn:open3:${ownerId}`)
-        .setLabel("➡️ Étape 3")
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`rjbtn:cancel:${ownerId}`)
-        .setLabel("❌ Annuler")
-        .setStyle(ButtonStyle.Danger)
-    );
-  }
-
-  return [row];
+    ),
+  ];
 }
 
 module.exports = {
@@ -67,36 +50,53 @@ module.exports = {
       });
     }
 
-    // STEP 2 MODAL
-    if (action === "open2") {
-      const modal = new ModalBuilder()
-        .setCustomId(`rj:step2:${ownerId}`)
-        .setTitle("Rapport jugement - Étape 2/3");
+    if (action === "continue") {
+      // ✅ On exige au moins 1 juge + 1 proc
+      const jugeIds = Array.isArray(draft.jugeIds) ? draft.jugeIds : [];
+      const procIds = Array.isArray(draft.procIds) ? draft.procIds : [];
+      const avocatIds = Array.isArray(draft.avocatIds) ? draft.avocatIds : []; // facultatif
 
-      const juge = new TextInputBuilder().setCustomId("juge").setLabel("Juge").setStyle(TextInputStyle.Short).setRequired(true);
-      const procureur = new TextInputBuilder().setCustomId("procureur").setLabel("Procureur").setStyle(TextInputStyle.Short).setRequired(true);
-      const avocat = new TextInputBuilder().setCustomId("avocat").setLabel("Avocat").setStyle(TextInputStyle.Short).setRequired(false);
+      if (jugeIds.length === 0) {
+        return interaction.reply({ content: "❌ Tu dois choisir au moins 1 juge.", ephemeral: true });
+      }
+      if (procIds.length === 0) {
+        return interaction.reply({ content: "❌ Tu dois choisir au moins 1 procureur.", ephemeral: true });
+      }
+      // avocatIds peut être vide => OK
 
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(juge),
-        new ActionRowBuilder().addComponents(procureur),
-        new ActionRowBuilder().addComponents(avocat)
-      );
-
-      return interaction.showModal(modal);
-    }
-
-    // STEP 3 MODAL
-    if (action === "open3") {
       const modal = new ModalBuilder()
         .setCustomId(`rj:step3:${ownerId}`)
-        .setTitle("Rapport jugement - Étape 3/3");
+        .setTitle("Rapport jugement - Sanctions");
 
-      const peine = new TextInputBuilder().setCustomId("peine").setLabel("Peine").setStyle(TextInputStyle.Paragraph).setRequired(false);
-      const amende = new TextInputBuilder().setCustomId("amende").setLabel("Amende").setStyle(TextInputStyle.Short).setRequired(false);
-      const tig = new TextInputBuilder().setCustomId("tig").setLabel("T.I.G. (oui/non)").setStyle(TextInputStyle.Short).setRequired(true);
-      const tigEntreprise = new TextInputBuilder().setCustomId("tigEntreprise").setLabel("Entreprise T.I.G.").setStyle(TextInputStyle.Short).setRequired(false);
-      const observation = new TextInputBuilder().setCustomId("observation").setLabel("Observation").setStyle(TextInputStyle.Paragraph).setRequired(false);
+      const peine = new TextInputBuilder()
+        .setCustomId("peine")
+        .setLabel("Peine")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true);
+
+      const amende = new TextInputBuilder()
+        .setCustomId("amende")
+        .setLabel("Amende")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false);
+
+      const tig = new TextInputBuilder()
+        .setCustomId("tig")
+        .setLabel("T.I.G. (oui/non)")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const tigEntreprise = new TextInputBuilder()
+        .setCustomId("tigEntreprise")
+        .setLabel("Entreprise T.I.G.")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false);
+
+      const observation = new TextInputBuilder()
+        .setCustomId("observation")
+        .setLabel("Observation")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(false);
 
       modal.addComponents(
         new ActionRowBuilder().addComponents(peine),

@@ -1,5 +1,10 @@
 // modals/rapportJugementModals.js
 
+const {
+  ActionRowBuilder,
+  UserSelectMenuBuilder,
+} = require("discord.js");
+
 const { updateDraft, getDraft, clearDraft } = require("../src/utils/rjDrafts");
 const { panel } = require("../buttons/rapportJugementButtons");
 const { parseJudgementDate, buildRapportJugementEmbed } = require("../src/utils/rapportJugementFormat");
@@ -25,35 +30,51 @@ module.exports = {
 
     await ensureTables();
 
+    // STEP 1: identité + date, puis affichage des sélecteurs
     if (step === "step1") {
       updateDraft(interaction.guildId, userId, {
         nom: safeVal(interaction, "nom"),
         prenom: safeVal(interaction, "prenom"),
         dateJugementRaw: safeVal(interaction, "dateJugement"),
+        // init arrays
+        jugeIds: [],
+        procIds: [],
+        avocatIds: [],
       });
 
+      // ✅ User selects multi
+      const rowJuge = new ActionRowBuilder().addComponents(
+        new UserSelectMenuBuilder()
+          .setCustomId(`rjsel:jugeIds:${userId}`)
+          .setPlaceholder("Choisir le(s) juge(s)")
+          .setMinValues(1)      // obligatoire
+          .setMaxValues(5)      // plusieurs juges
+      );
+
+      const rowProc = new ActionRowBuilder().addComponents(
+        new UserSelectMenuBuilder()
+          .setCustomId(`rjsel:procIds:${userId}`)
+          .setPlaceholder("Choisir le(s) procureur(s)")
+          .setMinValues(1)      // obligatoire
+          .setMaxValues(5)
+      );
+
+      const rowAvocat = new ActionRowBuilder().addComponents(
+        new UserSelectMenuBuilder()
+          .setCustomId(`rjsel:avocatIds:${userId}`)
+          .setPlaceholder("Choisir le(s) avocat(s) (facultatif)")
+          .setMinValues(0)      // ✅ avocat NON obligatoire
+          .setMaxValues(5)
+      );
+
       return interaction.reply({
-        content: "✅ Étape 1 enregistrée. Clique pour continuer.",
+        content: "✅ Étape 1 enregistrée.\nSélectionne les rôles (multi possible), puis clique **Continuer**.",
         ephemeral: true,
-        components: panel(userId, 1),
+        components: [rowJuge, rowProc, rowAvocat, ...panel(userId)],
       });
     }
 
-    if (step === "step2") {
-      updateDraft(interaction.guildId, userId, {
-        juge: safeVal(interaction, "juge"),
-        procureur: safeVal(interaction, "procureur"),
-        avocat: safeVal(interaction, "avocat"),
-      });
-
-      return interaction.reply({
-        content: "✅ Étape 2 enregistrée. Clique pour continuer.",
-        ephemeral: true,
-        components: panel(userId, 2),
-      });
-    }
-
-    // FINAL
+    // STEP 3 FINAL: sanctions
     if (step === "step3") {
       const draft = getDraft(interaction.guildId, userId);
       if (!draft) {
@@ -66,6 +87,11 @@ module.exports = {
       const tigRaw = safeVal(interaction, "tig") || "";
       const tigBool = ["oui", "o", "yes", "y"].includes(tigRaw.toLowerCase().trim());
 
+      // ✅ on transforme les listes en mentions (stockées et affichées)
+      const jugeMentions = (draft.jugeIds || []).map(id => `<@${id}>`).join(", ");
+      const procMentions = (draft.procIds || []).map(id => `<@${id}>`).join(", ");
+      const avocatMentions = (draft.avocatIds || []).map(id => `<@${id}>`).join(", ");
+
       const payload = {
         guildId: interaction.guildId,
         reporterUserId: interaction.user.id,
@@ -74,9 +100,10 @@ module.exports = {
         prenom: draft.prenom,
         dateJugement: parseJudgementDate(draft.dateJugementRaw),
 
-        juge: draft.juge,
-        procureur: draft.procureur,
-        avocat: draft.avocat,
+        // On stocke comme texte (mentions), même si plusieurs
+        juge: jugeMentions || "/",
+        procureur: procMentions || "/",
+        avocat: avocatMentions || "/",
 
         peine: safeVal(interaction, "peine"),
         amende: safeVal(interaction, "amende"),

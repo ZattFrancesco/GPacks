@@ -60,7 +60,7 @@ module.exports = {
       : "Aucun reset : depuis le début.";
 
     const embed = new EmbedBuilder()
-      .setTitle("🧾 Rapports de jugement — Paie semaine")
+      .setTitle("🧾 Rapports de jugement de la semaine")
       .setDescription(`${header}\n**Total période : ${total}** • **Affichés : ${rows.length}/${limit}**`)
       .setColor(0x2b2d31);
 
