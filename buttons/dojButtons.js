@@ -29,6 +29,15 @@ function wizardComponents(userId) {
   return [row];
 }
 
+function normalizeUrlMaybe(url) {
+  if (!url) return null;
+  const s = String(url).trim();
+  if (!s) return null;
+  // On ne tente pas de "réparer" : si ce n'est pas une URL http(s) brute, Discord ne preview pas.
+  if (!/^https?:\/\/\S+$/i.test(s)) return s; // on laisse quand même le texte, au pire
+  return s;
+}
+
 module.exports = {
   idPrefix: "doj:",
 
@@ -63,7 +72,7 @@ module.exports = {
 
       const photoCasier = new TextInputBuilder()
         .setCustomId("photoCasier")
-        .setLabel("Photo casier judiciaire (lien)")
+        .setLabel("Photo casier judiciaire (lien direct)")
         .setStyle(TextInputStyle.Short)
         .setRequired(false)
         .setMaxLength(300)
@@ -83,7 +92,7 @@ module.exports = {
 
       const photoIndividu = new TextInputBuilder()
         .setCustomId("photoIndividu")
-        .setLabel("Photo individu (lien)")
+        .setLabel("Photo individu (lien direct)")
         .setStyle(TextInputStyle.Short)
         .setRequired(false)
         .setMaxLength(300)
@@ -100,35 +109,43 @@ module.exports = {
 
     if (action === "send") {
       const pingRoleIds = await db.getPingRoleIds(guildId);
-      const ping = pingRoleIds.length
+      const pingLine = pingRoleIds.length
         ? `|| ${pingRoleIds.map((id) => `<@&${id}>`).join(" ")} ||`
         : null;
 
       const embed = buildJugementEmbed(draft);
 
-      // ⚠️ Les liens doivent être en TEXTE PUR (content) pour déclencher les previews Discord.
-      const imageLines = [
-        draft.photoCasier ? `Photo casier judiciaire: ${draft.photoCasier}` : null,
-        draft.photoIndividu ? `Photo individu: ${draft.photoIndividu}` : null,
-      ]
+      // ✅ On prépare les URL "pures" (seules sur une ligne) pour forcer les previews Discord
+      const urlCasier = normalizeUrlMaybe(draft.photoCasier);
+      const urlIndividu = normalizeUrlMaybe(draft.photoIndividu);
+
+      const pureUrls = [urlCasier, urlIndividu]
         .filter(Boolean)
+        // URL seule sur sa ligne = preview fiable
         .join("\n");
 
-      const content = [ping, imageLines].filter(Boolean).join("\n\n");
-
-      // Envoi dans le salon où l'agent est en train d'utiliser la commande
       const channel = interaction.channel;
       if (!channel) {
         return interaction.reply({ content: "❌ Salon introuvable.", ephemeral: true });
       }
 
-      await channel.send({ content: content || undefined, embeds: [embed] });
-      clearDraft(guildId, userId);
+      // 1) Message principal : pings + embed
+      await channel.send({
+        content: pingLine || undefined,
+        embeds: [embed],
+      });
 
+      // 2) Message pièces : URL brutes seules (si existantes) => previews
+      if (pureUrls) {
+        await channel.send({
+          content: pureUrls,
+        });
+      }
+
+      clearDraft(guildId, userId);
       return interaction.update({ content: "✅ Dossier envoyé.", embeds: [], components: [] });
     }
   },
 };
 
-// Export aussi le builder pour le réutiliser depuis les modals
 module.exports.wizardComponents = wizardComponents;
