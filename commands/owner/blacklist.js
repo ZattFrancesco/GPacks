@@ -22,7 +22,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!isOwner(interaction.user.id)) {
-      return interaction.reply({ content: "❌ Réservé à l'owner.", ephemeral: true });
+      return interaction.reply({ content: "❌ Réservé au développeur du bot.", ephemeral: true });
     }
 
     const sub = interaction.options.getSubcommand(true);
