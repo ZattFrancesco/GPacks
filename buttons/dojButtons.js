@@ -130,8 +130,7 @@ module.exports = {
         await channel.send({
           content:
             "📎 **Photos à ajouter (manuel)**\n" +
-            "➡️ Merci d’envoyer **les photos du casier judiciaire** + **photo de l’individu** **en réponse au dossier** (juste au-dessus).\n" +
-            "✅ Les previews s’afficheront automatiquement.",
+            "➡️ Merci d’envoyer **les photos du casier judiciaire** + **photo de l’individu** **en réponse au dossier** (juste au-dessus).\n",
           reply: { messageReference: dossierMsg.id },
           allowedMentions: { repliedUser: false },
         });
