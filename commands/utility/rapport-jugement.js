@@ -1,46 +1,42 @@
-// commands/utility/rapport-jugement.js
 const {
   SlashCommandBuilder,
   ModalBuilder,
-  ActionRowBuilder,
   TextInputBuilder,
   TextInputStyle,
-  PermissionFlagsBits,
-} = require("discord.js");
+  ActionRowBuilder,
+} = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("rapport-jugement")
-    .setDescription("Créer un rapport de jugement (wizard)")
-    .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
+    .setName('rapport-jugement')
+    .setDescription('Créer un rapport de jugement (wizard en plusieurs modals)'),
 
   async execute(interaction) {
     const userId = interaction.user.id;
 
     const modal = new ModalBuilder()
       .setCustomId(`rj:step1:${userId}`)
-      .setTitle("Rapport jugement (1/3)");
+      .setTitle('Rapport jugement - Étape 1/3');
 
     const nom = new TextInputBuilder()
-      .setCustomId("nom")
-      .setLabel("Nom")
+      .setCustomId('nom')
+      .setLabel('Nom')
       .setStyle(TextInputStyle.Short)
-      .setRequired(true)
-      .setMaxLength(80);
+      .setRequired(true);
 
     const prenom = new TextInputBuilder()
-      .setCustomId("prenom")
-      .setLabel("Prénom")
+      .setCustomId('prenom')
+      .setLabel('Prénom')
       .setStyle(TextInputStyle.Short)
-      .setRequired(true)
-      .setMaxLength(80);
+      .setRequired(true);
 
+    // ✅ label <= 45 caractères
     const dateJugement = new TextInputBuilder()
-      .setCustomId("dateJugement")
-      .setLabel("Date de jugement (timestamp / date, vide = maintenant)")
+      .setCustomId('dateJugement')
+      .setLabel('Date jugement (timestamp ou date)')
       .setStyle(TextInputStyle.Short)
       .setRequired(false)
-      .setMaxLength(60);
+      .setPlaceholder('ex: 1735689600 ou 2025-12-31 18:00');
 
     modal.addComponents(
       new ActionRowBuilder().addComponents(nom),

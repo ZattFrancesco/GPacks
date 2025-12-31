@@ -1,234 +1,190 @@
-// modals/rapportJugementModals.js
 const {
   ModalBuilder,
-  ActionRowBuilder,
   TextInputBuilder,
   TextInputStyle,
-} = require("discord.js");
+  ActionRowBuilder,
+} = require('discord.js');
 
-const { setDraft, getDraft, updateDraft, clearDraft } = require("../src/utils/rjDrafts");
-const { insertReport } = require("../services/rapportJugement.db");
+const { getDraft, updateDraft, clearDraft } = require('../src/utils/rjDrafts');
+const { parseJudgementDate, formatRapportJugement } = require('../src/utils/rapportJugementFormat');
 const {
-  parseUnixTimestamp,
-  parseOuiNon,
-  extractMentionUserId,
-  normalizeJudgeKey,
-  buildRapportText,
-} = require("../src/utils/rapportJugementFormat");
+  ensureTables,
+  insertReport,
+} = require('../services/rapportJugement.db');
 
-function safeVal(interaction, customId) {
+// petit helper pour éviter les crash si champ absent
+function safeVal(interaction, id) {
   try {
-    const v = interaction.fields.getTextInputValue(customId);
-    return (v ?? "").trim();
+    return interaction.fields.getTextInputValue(id);
   } catch {
-    return "";
+    return null;
   }
 }
 
-function makeModalStep2(userId) {
-  const modal = new ModalBuilder().setCustomId(`rj:step2:${userId}`).setTitle("Rapport jugement (2/3)");
-
-  const juge = new TextInputBuilder()
-    .setCustomId("juge")
-    .setLabel("Juge (mention ou nom)")
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true)
-    .setMaxLength(128);
-
-  const procureur = new TextInputBuilder()
-    .setCustomId("procureur")
-    .setLabel("Procureur")
-    .setStyle(TextInputStyle.Short)
-    .setRequired(false)
-    .setMaxLength(128);
-
-  const avocat = new TextInputBuilder()
-    .setCustomId("avocat")
-    .setLabel("Avocat")
-    .setStyle(TextInputStyle.Short)
-    .setRequired(false)
-    .setMaxLength(128);
-
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(juge),
-    new ActionRowBuilder().addComponents(procureur),
-    new ActionRowBuilder().addComponents(avocat)
-  );
-  return modal;
-}
-
-function makeModalStep3(userId) {
-  const modal = new ModalBuilder().setCustomId(`rj:step3:${userId}`).setTitle("Rapport jugement (3/3)");
-
-  const peine = new TextInputBuilder()
-    .setCustomId("peine")
-    .setLabel("Peine")
-    .setStyle(TextInputStyle.Paragraph)
-    .setRequired(false)
-    .setMaxLength(900);
-
-  const amende = new TextInputBuilder()
-    .setCustomId("amende")
-    .setLabel("Amende")
-    .setStyle(TextInputStyle.Short)
-    .setRequired(false)
-    .setMaxLength(100);
-
-  const tig = new TextInputBuilder()
-    .setCustomId("tig")
-    .setLabel("T.I.G. (Oui/Non)")
-    .setStyle(TextInputStyle.Short)
-    .setRequired(false)
-    .setMaxLength(8);
-
-  const tigEntreprise = new TextInputBuilder()
-    .setCustomId("tigEntreprise")
-    .setLabel("Entreprise T.I.G. (si Oui, sinon /)")
-    .setStyle(TextInputStyle.Short)
-    .setRequired(false)
-    .setMaxLength(160);
-
-  const observation = new TextInputBuilder()
-    .setCustomId("observation")
-    .setLabel("Observation")
-    .setStyle(TextInputStyle.Paragraph)
-    .setRequired(false)
-    .setMaxLength(900);
-
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(peine),
-    new ActionRowBuilder().addComponents(amende),
-    new ActionRowBuilder().addComponents(tig),
-    new ActionRowBuilder().addComponents(tigEntreprise),
-    new ActionRowBuilder().addComponents(observation)
-  );
-  return modal;
-}
-
 module.exports = {
-  idPrefix: "rj:",
+  idPrefix: 'rj:',
 
   async execute(interaction) {
-    const parts = interaction.customId.split(":");
-    const prefix = parts[0];
-    const action = parts[1];
-    const ownerId = parts[2];
+    const [prefix, step, userId] = interaction.customId.split(':');
 
-    if (prefix !== "rj") return;
-
-    if (ownerId && interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Ce formulaire ne t'appartient pas.", ephemeral: true });
+    if (interaction.user.id !== userId) {
+      return interaction.reply({
+        content: "❌ Ce formulaire ne t'appartient pas.",
+        ephemeral: true,
+      });
     }
 
-    const guildId = interaction.guildId;
-    const userId = interaction.user.id;
-    if (!guildId) return interaction.reply({ content: "❌ Commande utilisable uniquement en serveur.", ephemeral: true });
+    // Assure DB
+    await ensureTables();
 
     // STEP 1
-    if (action === "step1") {
-      const nom = safeVal(interaction, "nom");
-      const prenom = safeVal(interaction, "prenom");
-      const dateJugement = safeVal(interaction, "dateJugement");
+    if (step === 'step1') {
+      const nom = safeVal(interaction, 'nom');
+      const prenom = safeVal(interaction, 'prenom');
+      const dateJugementRaw = safeVal(interaction, 'dateJugement');
 
-      const date_jugement_unix = parseUnixTimestamp(dateJugement);
-
-      setDraft(guildId, userId, {
-        openedAt: new Date().toISOString(),
+      updateDraft(userId, {
         nom,
         prenom,
-        date_jugement_unix,
+        dateJugementRaw,
       });
 
-      return interaction.showModal(makeModalStep2(userId));
+      const modal = new ModalBuilder()
+        .setCustomId(`rj:step2:${userId}`)
+        .setTitle('Rapport jugement - Étape 2/3');
+
+      const juge = new TextInputBuilder()
+        .setCustomId('juge')
+        .setLabel('Juge')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const procureur = new TextInputBuilder()
+        .setCustomId('procureur')
+        .setLabel('Procureur')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const avocat = new TextInputBuilder()
+        .setCustomId('avocat')
+        .setLabel('Avocat')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(juge),
+        new ActionRowBuilder().addComponents(procureur),
+        new ActionRowBuilder().addComponents(avocat)
+      );
+
+      return interaction.showModal(modal);
     }
 
     // STEP 2
-    if (action === "step2") {
-      const existing = getDraft(guildId, userId);
-      if (!existing) {
-        return interaction.reply({
-          content: "⏱️ Ton rapport a expiré (15 min). Relance `/rapport-jugement`.",
-          ephemeral: true,
-        });
-      }
+    if (step === 'step2') {
+      const juge = safeVal(interaction, 'juge');
+      const procureur = safeVal(interaction, 'procureur');
+      const avocat = safeVal(interaction, 'avocat');
 
-      const juge = safeVal(interaction, "juge");
-      const procureur = safeVal(interaction, "procureur");
-      const avocat = safeVal(interaction, "avocat");
+      updateDraft(userId, { juge, procureur, avocat });
 
-      const judge_user_id = extractMentionUserId(juge);
-      const judge_name = judge_user_id ? `<@${judge_user_id}>` : juge;
-      const judge_key = normalizeJudgeKey(judge_user_id, judge_name);
+      const modal = new ModalBuilder()
+        .setCustomId(`rj:step3:${userId}`)
+        .setTitle('Rapport jugement - Étape 3/3');
 
-      updateDraft(guildId, userId, {
-        judge_user_id,
-        judge_name,
-        judge_key,
-        procureur,
-        avocat,
-      });
+      const peine = new TextInputBuilder()
+        .setCustomId('peine')
+        .setLabel('Peine')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true);
 
-      return interaction.showModal(makeModalStep3(userId));
+      const amende = new TextInputBuilder()
+        .setCustomId('amende')
+        .setLabel('Amende')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false);
+
+      const tig = new TextInputBuilder()
+        .setCustomId('tig')
+        .setLabel('T.I.G. (oui/non)')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setPlaceholder('oui ou non');
+
+      const tigEntreprise = new TextInputBuilder()
+        .setCustomId('tigEntreprise')
+        .setLabel('Entreprise T.I.G. (si oui)')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false);
+
+      const observation = new TextInputBuilder()
+        .setCustomId('observation')
+        .setLabel('Observation')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(false);
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(peine),
+        new ActionRowBuilder().addComponents(amende),
+        new ActionRowBuilder().addComponents(tig),
+        new ActionRowBuilder().addComponents(tigEntreprise),
+        new ActionRowBuilder().addComponents(observation)
+      );
+
+      return interaction.showModal(modal);
     }
 
     // STEP 3 (final)
-    if (action === "step3") {
-      const existing = getDraft(guildId, userId);
-      if (!existing) {
+    if (step === 'step3') {
+      const peine = safeVal(interaction, 'peine');
+      const amende = safeVal(interaction, 'amende');
+      const tigRaw = safeVal(interaction, 'tig');
+      const tigEntreprise = safeVal(interaction, 'tigEntreprise');
+      const observation = safeVal(interaction, 'observation');
+
+      const draft = getDraft(userId);
+      if (!draft) {
         return interaction.reply({
-          content: "⏱️ Ton rapport a expiré (15 min). Relance `/rapport-jugement`.",
+          content: "❌ Brouillon expiré (15 min). Relance /rapport-jugement.",
           ephemeral: true,
         });
       }
 
-      const peine = safeVal(interaction, "peine");
-      const amende = safeVal(interaction, "amende");
-      const tigRaw = safeVal(interaction, "tig");
-      const tigEntreprise = safeVal(interaction, "tigEntreprise");
-      const observation = safeVal(interaction, "observation");
+      const tig = (tigRaw || '').trim().toLowerCase();
+      const tigBool = tig === 'oui' || tig === 'o' || tig === 'yes' || tig === 'y';
 
-      const tig = parseOuiNon(tigRaw);
+      const dateJugement = parseJudgementDate(draft.dateJugementRaw);
 
-      const finalData = {
-        ...existing,
+      const payload = {
+        guildId: interaction.guildId,
+        reporterUserId: interaction.user.id,
+
+        nom: draft.nom,
+        prenom: draft.prenom,
+        dateJugement,
+
+        juge: draft.juge,
+        procureur: draft.procureur,
+        avocat: draft.avocat,
+
         peine,
         amende,
-        tig,
-        tig_entreprise: tig ? (tigEntreprise?.trim() || "/") : "/",
+        tig: tigBool ? 1 : 0,
+        tigEntreprise: tigEntreprise || '/',
         observation,
       };
 
-      // Persist
-      await insertReport({
-        guild_id: guildId,
-        reporter_user_id: userId,
-        date_jugement_unix: finalData.date_jugement_unix,
-        nom: finalData.nom,
-        prenom: finalData.prenom,
-        judge_user_id: finalData.judge_user_id ?? null,
-        judge_name: finalData.judge_name,
-        judge_key: finalData.judge_key,
-        procureur: finalData.procureur,
-        avocat: finalData.avocat,
-        peine: finalData.peine,
-        amende: finalData.amende,
-        tig: finalData.tig,
-        tig_entreprise: finalData.tig_entreprise,
-        observation: finalData.observation,
-      });
+      // Post message rapport
+      const content = formatRapportJugement(payload);
+      await interaction.reply({ content });
 
-      // Post in channel
-      const text = buildRapportText(finalData);
-      try {
-        await interaction.channel?.send({ content: text });
-      } catch {
-        // ignore
-      }
+      // Save DB
+      await insertReport(payload);
 
-      clearDraft(guildId, userId);
-      return interaction.reply({ content: "✅ Rapport enregistré et posté.", ephemeral: true });
+      // Clear draft
+      clearDraft(userId);
+
+      return;
     }
-
-    return interaction.reply({ content: "❌ Modal inconnu.", ephemeral: true });
   },
 };
