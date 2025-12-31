@@ -1,53 +1,58 @@
 // src/utils/dojDrafts.js
-// Stockage TEMPORAIRE (en mémoire) des dossiers "demande-jugement".
-// - Clean: simple, pas de DB, expire automatiquement.
+// Stockage temporaire en mémoire (simple + clean).
+// Expire au bout de 15 minutes.
 
-const DEFAULT_TTL_MS = 15 * 60 * 1000; // 15 min
-
-/** @type {Map<string, {payload: any, expiresAt: number, timeout: NodeJS.Timeout}>} */
+const TTL_MS = 15 * 60 * 1000;
 const drafts = new Map();
+// key = `${guildId}:${userId}` => { data, expiresAt }
 
-function makeKey(guildId, userId) {
+function keyOf(guildId, userId) {
   return `${guildId}:${userId}`;
 }
 
-function setDraft(guildId, userId, payload, ttlMs = DEFAULT_TTL_MS) {
-  const k = makeKey(guildId, userId);
-
-  // clear old
-  const prev = drafts.get(k);
-  if (prev?.timeout) clearTimeout(prev.timeout);
-
-  const expiresAt = Date.now() + ttlMs;
-  const timeout = setTimeout(() => {
-    drafts.delete(k);
-  }, ttlMs);
-
-  drafts.set(k, { payload, expiresAt, timeout });
-  return payload;
+function setDraft(guildId, userId, data) {
+  drafts.set(keyOf(guildId, userId), {
+    data,
+    expiresAt: Date.now() + TTL_MS,
+  });
 }
 
 function getDraft(guildId, userId) {
-  const k = makeKey(guildId, userId);
-  const item = drafts.get(k);
-  if (!item) return null;
-  if (Date.now() > item.expiresAt) {
-    if (item.timeout) clearTimeout(item.timeout);
+  const k = keyOf(guildId, userId);
+  const entry = drafts.get(k);
+  if (!entry) return null;
+
+  if (Date.now() > entry.expiresAt) {
     drafts.delete(k);
     return null;
   }
-  return item.payload;
+  return entry.data;
+}
+
+function updateDraft(guildId, userId, partial) {
+  const d = getDraft(guildId, userId);
+  if (!d) return null;
+
+  const next = { ...d, ...partial };
+  setDraft(guildId, userId, next);
+  return next;
 }
 
 function clearDraft(guildId, userId) {
-  const k = makeKey(guildId, userId);
-  const item = drafts.get(k);
-  if (item?.timeout) clearTimeout(item.timeout);
-  drafts.delete(k);
+  drafts.delete(keyOf(guildId, userId));
 }
+
+// petit nettoyage automatique (pas obligatoire, mais propre)
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, entry] of drafts.entries()) {
+    if (now > entry.expiresAt) drafts.delete(k);
+  }
+}, 60 * 1000).unref?.();
 
 module.exports = {
   setDraft,
   getDraft,
+  updateDraft,
   clearDraft,
 };

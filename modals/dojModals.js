@@ -1,92 +1,93 @@
-const { wizardComponents } = require("../buttons/dojButtons");
-const { setDraft, getDraft } = require("../src/utils/dojDrafts");
+// modals/dojModals.js
+const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require("discord.js");
+const { setDraft, getDraft, updateDraft } = require("../src/utils/dojDrafts");
 const { buildJugementEmbed } = require("../src/utils/jugementEmbed");
+const { wizardComponents } = require("../buttons/dojButtons");
 
-function parseOwner(customId, expectedPrefix) {
-  if (!customId?.startsWith(expectedPrefix)) return null;
-  const parts = customId.split(":");
-  return parts[2] || null;
+function safeVal(interaction, customId) {
+  const v = interaction.fields.getTextInputValue(customId);
+  return (v ?? "").trim();
 }
 
-module.exports = [
-  {
-    idPrefix: "doj:main:",
-    async execute(interaction) {
-      const ownerId = parseOwner(interaction.customId, "doj:main:");
-      if (ownerId && interaction.user.id !== ownerId) {
-        return interaction.reply({ content: "❌ Ce modal ne t'appartient pas.", ephemeral: true });
-      }
+module.exports = {
+  idPrefix: "doj:",
 
-      const guildId = interaction.guildId;
-      const userId = interaction.user.id;
+  async execute(interaction) {
+    const parts = interaction.customId.split(":");
+    // ex: doj:main:123 / doj:nbcasiers:123
+    const prefix = parts[0];
+    const action = parts[1];
+    const ownerId = parts[2];
 
-      const suspect = interaction.fields.getTextInputValue("suspect")?.trim();
-      const ppa = interaction.fields.getTextInputValue("ppa")?.trim();
-      const faits = interaction.fields.getTextInputValue("faits")?.trim();
-      const agentsPresentsRaw = interaction.fields.getTextInputValue("agents")?.trim();
-      const rapport = interaction.fields.getTextInputValue("rapport")?.trim();
+    if (prefix !== "doj") return;
 
-      const payload = {
+    if (ownerId && interaction.user.id !== ownerId) {
+      return interaction.reply({ content: "❌ Ce formulaire ne t'appartient pas.", ephemeral: true });
+    }
+
+    const guildId = interaction.guildId;
+    const userId = interaction.user.id;
+
+    if (action === "main") {
+      const suspect = safeVal(interaction, "suspect");
+      const ppa = safeVal(interaction, "ppa");
+      const faits = safeVal(interaction, "faits");
+      const agentsPresents = safeVal(interaction, "agentsPresents");
+      const rapport = safeVal(interaction, "rapport");
+
+      const draft = {
         openedAt: new Date().toISOString(),
         agentCharge: `<@${userId}>`,
+
         suspect,
         ppa,
         faits,
-        agentsPresents: agentsPresentsRaw || `<@${userId}>`,
+        agentsPresents,
         rapport,
-        // pièces (step2)
-        photoCasier: "",
+
         nbCasiers: "",
-        photoIndividu: "",
+
+        // On stocke des listes (casier peut avoir plusieurs images)
+        photoCasierUrls: [],
+        photoIndividuUrls: [],
       };
 
-      setDraft(guildId, userId, payload);
+      setDraft(guildId, userId, draft);
 
-      const embed = buildJugementEmbed(payload);
+      const preview = buildJugementEmbed(draft);
+
       return interaction.reply({
-        content: "✅ Étape 1 enregistrée. Tu peux ajouter les pièces ou envoyer.",
-        embeds: [embed],
-        components: wizardComponents(userId),
         ephemeral: true,
+        content:
+          "✅ Étape 1 enregistrée.\n" +
+          "Utilise les boutons pour uploader les photos (tu envoies juste les images dans le salon), puis clique **Valider et envoyer**.",
+        embeds: [preview],
+        components: wizardComponents(userId),
       });
-    },
-  },
-  {
-    idPrefix: "doj:pieces:",
-    async execute(interaction) {
-      const ownerId = parseOwner(interaction.customId, "doj:pieces:");
-      if (ownerId && interaction.user.id !== ownerId) {
-        return interaction.reply({ content: "❌ Ce modal ne t'appartient pas.", ephemeral: true });
-      }
+    }
 
-      const guildId = interaction.guildId;
-      const userId = interaction.user.id;
-      const draft = getDraft(guildId, userId);
-      if (!draft) {
+    if (action === "nbcasiers") {
+      const nb = safeVal(interaction, "nbCasiers");
+      const existing = getDraft(guildId, userId);
+      if (!existing) {
         return interaction.reply({
-          content: "⏱️ Ton dossier a expiré (15 min). Relance `/demande-jugement`.",
           ephemeral: true,
+          content: "⏱️ Ton dossier a expiré (15 min). Relance `/demande-jugement`.",
         });
       }
 
-      const photoCasier = interaction.fields.getTextInputValue("photoCasier")?.trim();
-      const nbCasiers = interaction.fields.getTextInputValue("nbCasiers")?.trim();
-      const photoIndividu = interaction.fields.getTextInputValue("photoIndividu")?.trim();
+      const updated = updateDraft(guildId, userId, { nbCasiers: nb });
+      const preview = buildJugementEmbed(updated);
 
-      draft.photoCasier = photoCasier || "";
-      draft.nbCasiers = nbCasiers || "";
-      draft.photoIndividu = photoIndividu || "";
-
-      // On ré-enregistre pour prolonger le TTL + garder le même objet propre
-      setDraft(guildId, userId, draft);
-
-      const embed = buildJugementEmbed(draft);
       return interaction.reply({
-        content: "✅ Pièces enregistrées. Tu peux maintenant envoyer.",
-        embeds: [embed],
-        components: wizardComponents(userId),
         ephemeral: true,
+        content: "✅ Nombre de casiers mis à jour.",
+        embeds: [preview],
+        components: wizardComponents(userId),
       });
-    },
+    }
+
+    // Si customId inconnu
+    return interaction.reply({ content: "❌ Modal inconnu.", ephemeral: true });
   },
-];
+};
