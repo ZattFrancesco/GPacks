@@ -15,9 +15,9 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("blacklist")
     .setDescription("Gestion blacklist globale du bot")
-    .addSubcommand((s) => s.setName("add").setDescription("Ajouter un utilisateur à la blacklist (modal)"))
-    .addSubcommand((s) => s.setName("remove").setDescription("Retirer un utilisateur de la blacklist (modal)"))
-    .addSubcommand((s) => s.setName("status").setDescription("Afficher la liste des blacklistés"))
+    .addSubcommand((s) => s.setName("add").setDescription("Restreint l'utilisation du bot a l'utilisateur entré."))
+    .addSubcommand((s) => s.setName("remove").setDescription("Annule la restriction de l'utilisation du bot."))
+    .addSubcommand((s) => s.setName("status").setDescription("Afficher la liste de membres restreints."))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
