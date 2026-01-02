@@ -32,8 +32,5 @@ module.exports = {
     } else {
       return interaction.reply({ content: "❌ Sélecteur inconnu.", ephemeral: true });
     }
-
-    // On ne change pas le message : on confirme juste
-    return interaction.reply({ content: "✅ Sélection enregistrée.", ephemeral: true });
   },
 };
