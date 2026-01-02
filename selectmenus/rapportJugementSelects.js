@@ -34,6 +34,6 @@ module.exports = {
     }
 
     // On ne change pas le message : on confirme juste
-    return interaction.reply({ content: "", ephemeral: true });
+    return interaction.reply({ content: "✅", ephemeral: true });
   },
 };
