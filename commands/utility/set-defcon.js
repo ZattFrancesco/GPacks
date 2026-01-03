@@ -1,5 +1,5 @@
 // commands/utility/set-defcon.js
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require("discord.js");
 const defconDb = require("../../services/defcon.db");
 
 function buildDefconEmbed(level, cfg) {
@@ -13,10 +13,42 @@ function buildDefconEmbed(level, cfg) {
   return e;
 }
 
+async function sendOrEditInChannel({ client, channelId, lastMessageId, payload }) {
+  let channel = null;
+  try {
+    channel = await client.channels.fetch(channelId);
+  } catch {
+    channel = null;
+  }
+
+  if (!channel || !channel.isTextBased?.()) {
+    return { ok: false, reason: "channel_not_found" };
+  }
+
+  // essaie d'éditer
+  if (lastMessageId) {
+    try {
+      const msg = await channel.messages.fetch(lastMessageId);
+      if (msg) {
+        await msg.edit(payload);
+        return { ok: true, edited: true, messageId: msg.id };
+      }
+    } catch {
+      // on tombera sur send
+    }
+  }
+
+  // sinon on envoie
+  const sent = await channel.send(payload);
+  return { ok: true, edited: false, messageId: sent.id };
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("set-defcon")
-    .setDescription("Envoie le message DEFCON configuré")
+    .setDescription("Active un niveau DEFCON (envoie dans tous les serveurs configurés)")
+    .setDMPermission(false)
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addIntegerOption((opt) =>
       opt
         .setName("niveau")
@@ -29,67 +61,58 @@ module.exports = {
         )
     ),
   async execute(interaction) {
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({ content: "❌ Admin uniquement.", ephemeral: true });
+    }
+
     const level = interaction.options.getInteger("niveau", true);
-
-    const settings = await defconDb.getDefconSettings();
-    const channelId = settings.channel_id;
-    if (!channelId) {
-      return interaction.reply({
-        content: "❌ Aucun salon DEFCON configuré. Fais d'abord **/set-defcon-channel**.",
-        ephemeral: true,
-      });
-    }
-
     const cfg = await defconDb.getDefconMessage(level);
+    const embed = buildDefconEmbed(level, cfg);
 
-    let channel;
-    try {
-      channel = await interaction.client.channels.fetch(channelId);
-    } catch {
-      channel = null;
-    }
-
-    if (!channel || !channel.isTextBased?.()) {
+    const configs = await defconDb.getAllChannelConfigs();
+    if (!configs.length) {
       return interaction.reply({
-        content: "❌ Le salon DEFCON configuré est invalide ou inaccessible. Reconfigure avec **/set-defcon-channel**.",
+        content: "❌ Aucun salon DEFCON n'est configuré. Utilise **/set-defcon-channel** dans chaque serveur.",
         ephemeral: true,
       });
     }
 
-    
-const embed = buildDefconEmbed(level, cfg);
+    let ok = 0;
+    let edited = 0;
+    let failed = 0;
 
-const mention = settings.ping_role_id ? `<@&${settings.ping_role_id}>` : null;
-const payload = {
-  content: mention || undefined,
-  embeds: [embed],
-  allowedMentions: mention ? { roles: [settings.ping_role_id] } : { parse: [] },
-};
+    // On envoie dans TOUS les salons configurés (tous serveurs)
+    for (const row of configs) {
+      const mention = row.ping_role_id ? `<@&${row.ping_role_id}>` : null;
 
-// 🔁 Au lieu de renvoyer un nouveau message à chaque fois:
-// - si on a un last_message_id, on essaye de modifier ce message
-// - sinon on envoie un nouveau message et on sauvegarde son id
-let edited = false;
+      const payload = {
+        content: mention || undefined,
+        embeds: [embed],
+        allowedMentions: mention ? { roles: [row.ping_role_id] } : { parse: [] },
+      };
 
-if (settings.last_message_id) {
-  try {
-    const msg = await channel.messages.fetch(settings.last_message_id);
-    if (msg) {
-      await msg.edit(payload);
-      edited = true;
+      try {
+        const r = await sendOrEditInChannel({
+          client: interaction.client,
+          channelId: row.channel_id,
+          lastMessageId: row.last_message_id,
+          payload,
+        });
+
+        if (r.ok) {
+          ok += 1;
+          if (r.edited) edited += 1;
+          await defconDb.setLastDefconMessageId(row.guild_id, r.messageId);
+        } else {
+          failed += 1;
+        }
+      } catch {
+        failed += 1;
+      }
     }
-  } catch {
-    edited = false;
-  }
-}
 
-if (!edited) {
-  const sent = await channel.send(payload);
-  await defconDb.setLastDefconMessageId(sent.id);
-}
-
-return interaction.reply({
-      content: `✅ DEFCON ${level} publié dans <#${channelId}>.`,
+    return interaction.reply({
+      content: `✅ DEFCON ${level} envoyé dans ${ok} salon(s) configuré(s). (modifié: ${edited}, échec: ${failed})`,
       ephemeral: true,
     });
   },

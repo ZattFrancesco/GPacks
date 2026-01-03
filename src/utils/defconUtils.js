@@ -23,8 +23,7 @@ function buildConfigButtons() {
 }
 
 async function buildConfigEmbed(client) {
-  const [cId, d1, d2, d3] = await Promise.all([
-    defconDb.getDefconSettings().then(s=>s.channel_id),
+  const [d1, d2, d3] = await Promise.all([
     defconDb.getDefconMessage(1),
     defconDb.getDefconMessage(2),
     defconDb.getDefconMessage(3),

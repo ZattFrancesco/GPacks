@@ -1,34 +1,45 @@
 // commands/utility/set-defcon-channel.js
-const { SlashCommandBuilder, ChannelType } = require("discord.js");
+const { SlashCommandBuilder, ChannelType, PermissionFlagsBits } = require("discord.js");
 const defconDb = require("../../services/defcon.db");
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("set-defcon-channel")
-    .setDescription("Configure le salon global d'envoi DEFCON")
+    .setDescription("Configure le salon DEFCON pour CE serveur")
+    .setDMPermission(false)
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addChannelOption((opt) =>
       opt
         .setName("channel")
-        .setDescription("Salon où envoyer les messages DEFCON")
+        .setDescription("Salon où envoyer les messages DEFCON (sur ce serveur)")
         .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
         .setRequired(true)
     )
     .addRoleOption((opt) =>
       opt
         .setName("ping_role")
-        .setDescription("Rôle à mentionner quand un DEFCON est envoyé (optionnel)")
+        .setDescription("Rôle à mentionner à chaque DEFCON (optionnel)")
         .setRequired(false)
     ),
   async execute(interaction) {
+    // sécurité en plus (au cas où)
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({ content: "❌ Admin uniquement.", ephemeral: true });
+    }
+
     const ch = interaction.options.getChannel("channel", true);
     const role = interaction.options.getRole("ping_role", false);
 
-    await defconDb.setDefconChannelConfig({ channelId: ch.id, pingRoleId: role?.id || null });
-    // Nouveau salon => on oublie l'ancien message "pinned" DEFCON
-    await defconDb.setLastDefconMessageId(null);
-return interaction.reply({
-      content: `✅ Salon DEFCON configuré sur ${ch}.${role ? `
-🔔 Rôle mentionné: ${role}` : ""}`,
+    await defconDb.setDefconChannelConfig({
+      guildId: interaction.guildId,
+      channelId: ch.id,
+      pingRoleId: role?.id || null,
+    });
+
+    return interaction.reply({
+      content:
+        `✅ Salon DEFCON configuré sur ${ch}.` +
+        (role ? `\n🔔 Rôle mentionné: ${role}` : ""),
       ephemeral: true,
     });
   },
