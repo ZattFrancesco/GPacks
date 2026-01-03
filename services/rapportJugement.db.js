@@ -166,7 +166,9 @@ async function getCountsByJudge(guildId, sinceDate = null) {
   if (!guildId) return [];
   await ensureTables();
 
-  const params = [guildId];
+  // `applyNameSearch` peut retourner une nouvelle version de `params`.
+  // Donc `params` doit être réassignable (sinon erreur: "Assignment to constant variable").
+  let params = [guildId];
   let where = "guild_id = ?";
 
   if (sinceDate) {
@@ -198,7 +200,50 @@ function normalizeSearch(raw) {
   const s = String(raw ?? "").trim();
   if (!s) return null;
   // On coupe pour éviter de gonfler les paramètres et limiter les abus
-  return s.slice(0, 80);
+  return s.replace(/\s+/g, " ").slice(0, 80);
+}
+
+/**
+ * Ajoute une recherche robuste sur nom/prénom.
+ *
+ * Cas gérés :
+ * - "vazimov"            -> match nom OU prénom
+ * - "ibrahim vazimov"    -> match (prenom+nom) OU (nom+prenom)
+ * - on garde aussi les concat avec espaces pour les recherches "plein nom".
+ */
+function applyNameSearch(where, params, search) {
+  const q = normalizeSearch(search);
+  if (!q) return { where, params };
+
+  // On split sur les espaces pour détecter "prenom nom".
+  const tokens = q.split(" ").filter(Boolean).slice(0, 3);
+
+  // 1 seul mot : simple LIKE sur nom/prénom + concat dans les 2 sens.
+  if (tokens.length === 1) {
+    const like = `%${tokens[0]}%`;
+    where +=
+      " AND (nom LIKE ? OR prenom LIKE ? OR CONCAT(nom, ' ', prenom) LIKE ? OR CONCAT(prenom, ' ', nom) LIKE ?)";
+    params.push(like, like, like, like);
+    return { where, params };
+  }
+
+  // 2+ mots : on essaye de faire (prenom + nom) OU (nom + prenom)
+  // Exemple: tokens[0]="ibrahim", tokens[1]="vazimov".
+  const a = `%${tokens[0]}%`;
+  const b = `%${tokens[1]}%`;
+  const full = `%${tokens.join(" ")}%`;
+
+  where +=
+    " AND (" +
+    "(prenom LIKE ? AND nom LIKE ?)" +
+    " OR (prenom LIKE ? AND nom LIKE ?)" +
+    " OR CONCAT(nom, ' ', prenom) LIKE ?" +
+    " OR CONCAT(prenom, ' ', nom) LIKE ?" +
+    ")";
+
+  // (prenom=a AND nom=b) OR (prenom=b AND nom=a)
+  params.push(a, b, b, a, full, full);
+  return { where, params };
 }
 
 /**
@@ -208,7 +253,9 @@ async function listReports(guildId, sinceDate = null, limit = 200, offset = 0, s
   if (!guildId) return [];
   await ensureTables();
 
-  const params = [guildId];
+  // `applyNameSearch` peut retourner une nouvelle version de `params`.
+  // Donc `params` doit être réassignable (sinon erreur: "Assignment to constant variable").
+  let params = [guildId];
   let where = "guild_id = ?";
 
   if (sinceDate) {
@@ -216,13 +263,7 @@ async function listReports(guildId, sinceDate = null, limit = 200, offset = 0, s
     params.push(sinceDate);
   }
 
-  const q = normalizeSearch(search);
-  if (q) {
-    // Recherche simple sur identité (nom/prénom)
-    where += " AND (nom LIKE ? OR prenom LIKE ? OR CONCAT(nom, ' ', prenom) LIKE ?)";
-    const like = `%${q}%`;
-    params.push(like, like, like);
-  }
+  ({ where, params } = applyNameSearch(where, params, search));
 
   const lim = Math.min(Math.max(Number(limit) || 200, 1), 500);
   const off = Math.min(Math.max(Number(offset) || 0, 0), 1000000);
@@ -270,12 +311,7 @@ async function getReportCount(guildId, sinceDate = null, search = null) {
     params.push(sinceDate);
   }
 
-  const q = normalizeSearch(search);
-  if (q) {
-    where += " AND (nom LIKE ? OR prenom LIKE ? OR CONCAT(nom, ' ', prenom) LIKE ?)";
-    const like = `%${q}%`;
-    params.push(like, like, like);
-  }
+  ({ where, params } = applyNameSearch(where, params, search));
 
   const rows = await query(
     `SELECT COUNT(*) AS cnt
