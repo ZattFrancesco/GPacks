@@ -1,26 +1,65 @@
-const { checkPermsDb, deny } = require("../src/utils/permissionGuardDb");
+const { EmbedBuilder } = require('discord.js');
+const { buildPaginationComponents } = require('../utils/pagination');
+const {
+  listReportsWeek,
+  listReportsAll,
+  countReportsWeek,
+  countReportsAll
+} = require('../services/rapportJugement.db');
 
-module.exports = async (client, interaction) => {
-  let btn = client.buttons?.get(interaction.customId);
+const PAGE_SIZE = 10;
 
-  if (!btn && Array.isArray(client.buttonsPrefix)) {
-    btn = client.buttonsPrefix.find((b) => interaction.customId.startsWith(b.idPrefix));
+module.exports = async (interaction) => {
+  if (!interaction.isButton()) return;
+
+  const [action, messageId] = interaction.customId.split(':');
+
+  if (!messageId || interaction.message.id !== messageId) {
+    return interaction.reply({
+      content: '❌ Bouton expiré ou invalide.',
+      ephemeral: true
+    });
   }
-  if (!btn) return;
 
-  const itemKey = `button:${interaction.customId}`;
-  const res = await checkPermsDb(interaction, itemKey);
-  if (!res.ok) return deny(interaction, res.reason);
+  const footer = interaction.message.embeds[0]?.footer?.text || '';
+  let page = Number(footer.match(/Page (\d+)/)?.[1]) || 1;
 
-  try {
-    await btn.execute(interaction, client);
-  } catch (err) {
-    // Empêche le process de crash sur des erreurs Discord (ex: message vide, embed trop gros, etc.)
-    console.error("[buttonHandler]", err);
-    try {
-      if (!interaction.deferred && !interaction.replied) {
-        await interaction.reply({ content: "❌ Une erreur est survenue sur ce bouton.", ephemeral: true });
-      }
-    } catch (_) {}
+  if (action === 'rapport_prev') page--;
+  if (action === 'rapport_next') page++;
+
+  const isWeek = interaction.message.embeds[0].title.includes('Semaine');
+
+  const total = isWeek
+    ? await countReportsWeek()
+    : await countReportsAll();
+
+  const maxPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  page = Math.min(Math.max(page, 1), maxPage);
+
+  const offset = (page - 1) * PAGE_SIZE;
+
+  const reports = isWeek
+    ? await listReportsWeek(offset, PAGE_SIZE)
+    : await listReportsAll(offset, PAGE_SIZE);
+
+  const embed = new EmbedBuilder()
+    .setTitle(isWeek ? '📄 Rapports – Semaine' : '📚 Rapports – Tous')
+    .setColor(0x2b2d31)
+    .setFooter({ text: `Page ${page} / ${maxPage}` });
+
+  for (const r of reports) {
+    embed.addFields({
+      name: `Rapport #${r.id}`,
+      value: (r.observation || r.faits || '—').slice(0, 700)
+    });
   }
+
+  await interaction.update({
+    embeds: [embed],
+    components: buildPaginationComponents({
+      page,
+      maxPage,
+      messageId
+    })
+  });
 };
