@@ -10,12 +10,20 @@ module.exports = {
     .setDescription("Afficher les rapports de la semaine avec pagination"),
 
   async execute(interaction) {
+    if (!interaction.guildId) {
+      return interaction.reply({
+        content: "❌ Cette commande doit être utilisée dans un serveur.",
+        ephemeral: true
+      });
+    }
+
+    const guildId = interaction.guildId;
     const page = 1;
 
-    const total = await countReportsWeek();
+    const total = await countReportsWeek(guildId);
     const maxPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-    const reports = await listReportsWeek(0, PAGE_SIZE);
+    const reports = await listReportsWeek(guildId, 0, PAGE_SIZE);
 
     if (!reports.length) {
       return interaction.reply({
