@@ -12,5 +12,15 @@ module.exports = async (client, interaction) => {
   const res = await checkPermsDb(interaction, itemKey);
   if (!res.ok) return deny(interaction, res.reason);
 
-  await btn.execute(interaction, client);
+  try {
+    await btn.execute(interaction, client);
+  } catch (err) {
+    // Empêche le process de crash sur des erreurs Discord (ex: message vide, embed trop gros, etc.)
+    console.error("[buttonHandler]", err);
+    try {
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.reply({ content: "❌ Une erreur est survenue sur ce bouton.", ephemeral: true });
+      }
+    } catch (_) {}
+  }
 };

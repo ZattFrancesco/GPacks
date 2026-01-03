@@ -22,7 +22,9 @@ function cut(str, max = 120) {
   return s.slice(0, max - 1) + "…";
 }
 
-function clampLen(str, max = 1000) {
+// Discord limite un embed à 6000 caractères.
+// Avec 10 rapports/page, on tronque fort pour éviter MAX_EMBED_SIZE_EXCEEDED.
+function clampLen(str, max = 420) {
   const s = String(str ?? "");
   if (s.length <= max) return s;
   return s.slice(0, max - 1) + "…";
@@ -32,30 +34,30 @@ function yn(v) {
   return v ? "Oui" : "Non";
 }
 
-function buildPager(mode, ownerId, page, pages, limit) {
+function buildPager(mode, ownerId, session, page, pages, limit) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`rjrep:${mode}:${ownerId}:1:${limit}`)
+      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:1:${limit}`)
       .setLabel("⏮️")
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page <= 1),
     new ButtonBuilder()
-      .setCustomId(`rjrep:${mode}:${ownerId}:${page - 1}:${limit}`)
+      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:${page - 1}:${limit}`)
       .setLabel("⬅️")
       .setStyle(ButtonStyle.Primary)
       .setDisabled(page <= 1),
     new ButtonBuilder()
-      .setCustomId(`rjrep:${mode}:${ownerId}:${page + 1}:${limit}`)
+      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:${page + 1}:${limit}`)
       .setLabel("➡️")
       .setStyle(ButtonStyle.Primary)
       .setDisabled(page >= pages),
     new ButtonBuilder()
-      .setCustomId(`rjrep:${mode}:${ownerId}:${pages}:${limit}`)
+      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:${pages}:${limit}`)
       .setLabel("⏭️")
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page >= pages),
     new ButtonBuilder()
-      .setCustomId(`rjrepgo:${mode}:${ownerId}:${pages}:${limit}`)
+      .setCustomId(`rjrepgo:${mode}:${ownerId}:${session}:${pages}:${limit}`)
       .setLabel("🔎 Aller")
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(pages <= 1)
@@ -66,12 +68,13 @@ module.exports = {
   idPrefix: "rjrepgoModal:",
 
   async execute(interaction) {
-    // rjrepgoModal:<mode>:<ownerId>:<pages>:<limit>
+    // rjrepgoModal:<mode>:<ownerId>:<session>:<pages>:<limit>
     const parts = String(interaction.customId || "").split(":");
     const mode = parts[1];
     const ownerId = parts[2];
-    const pagesProvided = Number(parts[3]);
-    const limitRaw = Number(parts[4]);
+    const session = parts[3];
+    const pagesProvided = Number(parts[4]);
+    const limitRaw = Number(parts[5]);
 
     if (!ownerId || interaction.user.id !== ownerId) {
       return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
@@ -123,7 +126,7 @@ module.exports = {
 
     if (!rows.length) {
       embed.addFields({ name: "Rapports", value: "_Aucun rapport._" });
-      return interaction.update({ embeds: [embed], components: [buildPager(mode, ownerId, page, pages, limit)] });
+      return interaction.update({ embeds: [embed], components: [buildPager(mode, ownerId, session, page, pages, limit)] });
     }
 
     rows.forEach((r, idx) => {
@@ -142,7 +145,8 @@ module.exports = {
       const tigOui = Number(r.tig) === 1;
       const tigEnt = tigOui ? safe(r.tig_entreprise) : "/";
 
-      const obs = cut(r.observation, 140);
+      // "observation" est souvent le champ le plus long : on le coupe plus fort.
+      const obs = cut(r.observation, 110);
       const by = r.reporter_user_id ? `<@${r.reporter_user_id}>` : "/";
 
       const value = clampLen(
@@ -151,8 +155,7 @@ module.exports = {
           `💰 **Peine**: ${peine} • **Amende**: ${amende} • **TIG**: ${yn(tigOui)}${tigOui ? ` (**${tigEnt}**)` : ""}`,
           `📝 **Obs**: ${obs}`,
           `✍️ **Enregistré par**: ${by}`,
-        ].join("\n"),
-        1000
+        ].join("\n")
       );
 
       embed.addFields({
@@ -163,7 +166,7 @@ module.exports = {
 
     return interaction.update({
       embeds: [embed],
-      components: [buildPager(mode, ownerId, page, pages, limit)],
+      components: [buildPager(mode, ownerId, session, page, pages, limit)],
     });
   },
 };

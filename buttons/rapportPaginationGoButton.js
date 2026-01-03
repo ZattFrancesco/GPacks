@@ -12,12 +12,13 @@ module.exports = {
   idPrefix: "rjrepgo:",
 
   async execute(interaction) {
-    // rjrepgo:<mode>:<ownerId>:<pages>:<limit>
+    // rjrepgo:<mode>:<ownerId>:<session>:<pages>:<limit>
     const parts = String(interaction.customId || "").split(":");
     const mode = parts[1];
     const ownerId = parts[2];
-    const pages = Number(parts[3]);
-    const limit = Number(parts[4]);
+    const session = parts[3];
+    const pages = Number(parts[4]);
+    const limit = Number(parts[5]);
 
     if (!ownerId || interaction.user.id !== ownerId) {
       return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
@@ -30,7 +31,7 @@ module.exports = {
     }
 
     const modal = new ModalBuilder()
-      .setCustomId(`rjrepgoModal:${mode}:${ownerId}:${pages}:${limit}`)
+      .setCustomId(`rjrepgoModal:${mode}:${ownerId}:${session}:${pages}:${limit}`)
       .setTitle("Aller à une page");
 
     const input = new TextInputBuilder()

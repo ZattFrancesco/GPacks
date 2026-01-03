@@ -12,5 +12,14 @@ module.exports = async (client, interaction) => {
   const res = await checkPermsDb(interaction, itemKey);
   if (!res.ok) return deny(interaction, res.reason);
 
-  await modal.execute(interaction, client);
+  try {
+    await modal.execute(interaction, client);
+  } catch (err) {
+    console.error("[modalHandler]", err);
+    try {
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.reply({ content: "❌ Une erreur est survenue sur ce formulaire.", ephemeral: true });
+      }
+    } catch (_) {}
+  }
 };

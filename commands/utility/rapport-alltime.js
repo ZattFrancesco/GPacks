@@ -20,7 +20,9 @@ function cut(str, max = 120) {
   return s.slice(0, max - 1) + "…";
 }
 
-function clampLen(str, max = 1000) {
+// Discord limite un embed à 6000 caractères.
+// Avec 10 rapports/page, on doit TRONQUER fort pour éviter l'erreur MAX_EMBED_SIZE_EXCEEDED.
+function clampLen(str, max = 420) {
   const s = String(str ?? "");
   if (s.length <= max) return s;
   return s.slice(0, max - 1) + "…";
@@ -45,6 +47,7 @@ module.exports = {
     const perPage = 10;
     const limit = Math.min(Math.max(interaction.options.getInteger("limit") ?? 30, 1), 500);
     const page = 1;
+    const session = interaction.id;
 
     const total = await getReportCount(interaction.guildId, null);
     const cappedTotal = Math.min(total, limit);
@@ -80,7 +83,8 @@ module.exports = {
       const tigOui = Number(r.tig) === 1;
       const tigEnt = tigOui ? safe(r.tig_entreprise) : "/";
 
-      const obs = cut(r.observation, 140);
+      // "observation" est souvent le champ le plus long : on le coupe plus fort.
+      const obs = cut(r.observation, 110);
       const by = r.reporter_user_id ? `<@${r.reporter_user_id}>` : "/";
 
       const value = clampLen(
@@ -89,8 +93,7 @@ module.exports = {
           `💰 **Peine**: ${peine} • **Amende**: ${amende} • **TIG**: ${yn(tigOui)}${tigOui ? ` (**${tigEnt}**)` : ""}`,
           `📝 **Obs**: ${obs}`,
           `✍️ **Enregistré par**: ${by}`,
-        ].join("\n"),
-        1000
+        ].join("\n")
       );
 
       embed.addFields({
@@ -102,27 +105,27 @@ module.exports = {
     const ownerId = interaction.user.id;
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`rjrep:all:${ownerId}:1:${limit}`)
+        .setCustomId(`rjrep:all:${ownerId}:${session}:1:${limit}`)
         .setLabel("⏮️")
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page <= 1),
       new ButtonBuilder()
-        .setCustomId(`rjrep:all:${ownerId}:${page - 1}:${limit}`)
+        .setCustomId(`rjrep:all:${ownerId}:${session}:${page - 1}:${limit}`)
         .setLabel("⬅️")
         .setStyle(ButtonStyle.Primary)
         .setDisabled(page <= 1),
       new ButtonBuilder()
-        .setCustomId(`rjrep:all:${ownerId}:${page + 1}:${limit}`)
+        .setCustomId(`rjrep:all:${ownerId}:${session}:${page + 1}:${limit}`)
         .setLabel("➡️")
         .setStyle(ButtonStyle.Primary)
         .setDisabled(page >= pages),
       new ButtonBuilder()
-        .setCustomId(`rjrep:all:${ownerId}:${pages}:${limit}`)
+        .setCustomId(`rjrep:all:${ownerId}:${session}:${pages}:${limit}`)
         .setLabel("⏭️")
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page >= pages),
       new ButtonBuilder()
-        .setCustomId(`rjrepgo:all:${ownerId}:${pages}:${limit}`)
+        .setCustomId(`rjrepgo:all:${ownerId}:${session}:${pages}:${limit}`)
         .setLabel("🔎 Aller")
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(pages <= 1)

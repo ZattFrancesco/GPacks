@@ -20,7 +20,9 @@ function cut(str, max = 120) {
   return s.slice(0, max - 1) + "…";
 }
 
-function clampLen(str, max = 1000) {
+// Discord limite un embed à 6000 caractères.
+// Avec 10 rapports/page, on doit TRONQUER fort pour éviter l'erreur MAX_EMBED_SIZE_EXCEEDED.
+function clampLen(str, max = 420) {
   const s = String(str ?? "");
   if (s.length <= max) return s;
   return s.slice(0, max - 1) + "…";
@@ -90,7 +92,8 @@ module.exports = {
       const tigOui = Number(r.tig) === 1;
       const tigEnt = tigOui ? safe(r.tig_entreprise) : "/";
 
-      const obs = cut(r.observation, 140);
+      // "observation" est souvent le champ le plus long : on le coupe plus fort.
+      const obs = cut(r.observation, 110);
       const by = r.reporter_user_id ? `<@${r.reporter_user_id}>` : "/";
 
       const value = clampLen(
@@ -99,8 +102,7 @@ module.exports = {
           `💰 **Peine**: ${peine} • **Amende**: ${amende} • **TIG**: ${yn(tigOui)}${tigOui ? ` (**${tigEnt}**)` : ""}`,
           `📝 **Obs**: ${obs}`,
           `✍️ **Enregistré par**: ${by}`,
-        ].join("\n"),
-        1000
+        ].join("\n")
       );
 
       embed.addFields({
@@ -110,29 +112,32 @@ module.exports = {
     });
 
     const ownerId = interaction.user.id;
+    // "session" rend les custom_id uniques et évite les erreurs COMPONENT_CUSTOM_ID_DUPLICATED
+    // même si plusieurs panneaux existent en même temps.
+    const session = interaction.id;
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`rjrep:week:${ownerId}:1:${limit}`)
+        .setCustomId(`rjrep:week:${ownerId}:${session}:1:${limit}`)
         .setLabel("⏮️")
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page <= 1),
       new ButtonBuilder()
-        .setCustomId(`rjrep:week:${ownerId}:${page - 1}:${limit}`)
+        .setCustomId(`rjrep:week:${ownerId}:${session}:${page - 1}:${limit}`)
         .setLabel("⬅️")
         .setStyle(ButtonStyle.Primary)
         .setDisabled(page <= 1),
       new ButtonBuilder()
-        .setCustomId(`rjrep:week:${ownerId}:${page + 1}:${limit}`)
+        .setCustomId(`rjrep:week:${ownerId}:${session}:${page + 1}:${limit}`)
         .setLabel("➡️")
         .setStyle(ButtonStyle.Primary)
         .setDisabled(page >= pages),
       new ButtonBuilder()
-        .setCustomId(`rjrep:week:${ownerId}:${pages}:${limit}`)
+        .setCustomId(`rjrep:week:${ownerId}:${session}:${pages}:${limit}`)
         .setLabel("⏭️")
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page >= pages),
       new ButtonBuilder()
-        .setCustomId(`rjrepgo:week:${ownerId}:${pages}:${limit}`)
+        .setCustomId(`rjrepgo:week:${ownerId}:${session}:${pages}:${limit}`)
         .setLabel("🔎 Aller")
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(pages <= 1)

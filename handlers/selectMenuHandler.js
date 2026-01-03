@@ -12,5 +12,14 @@ module.exports = async (client, interaction) => {
   const res = await checkPermsDb(interaction, itemKey);
   if (!res.ok) return deny(interaction, res.reason);
 
-  await menu.execute(interaction, client);
+  try {
+    await menu.execute(interaction, client);
+  } catch (err) {
+    console.error("[selectMenuHandler]", err);
+    try {
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.reply({ content: "❌ Une erreur est survenue avec ce menu.", ephemeral: true });
+      }
+    } catch (_) {}
+  }
 };
