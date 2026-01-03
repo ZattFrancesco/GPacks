@@ -36,24 +36,27 @@ function yn(v) {
 }
 
 function buildComponents(mode, ownerId, session, page, pages, limit, hasFilter) {
+  // IMPORTANT : les custom_id doivent être uniques, même si 2 boutons mènent à la même page.
+  // On encode donc une action (first/prev/next/last) + l'état (page/pages) dans le custom_id.
+
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:1:${limit}`)
+      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:first:${page}:${pages}:${limit}`)
       .setLabel("⏮️")
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page <= 1),
     new ButtonBuilder()
-      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:${page - 1}:${limit}`)
+      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:prev:${page}:${pages}:${limit}`)
       .setLabel("⬅️")
       .setStyle(ButtonStyle.Primary)
       .setDisabled(page <= 1),
     new ButtonBuilder()
-      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:${page + 1}:${limit}`)
+      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:next:${page}:${pages}:${limit}`)
       .setLabel("➡️")
       .setStyle(ButtonStyle.Primary)
       .setDisabled(page >= pages),
     new ButtonBuilder()
-      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:${pages}:${limit}`)
+      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:last:${page}:${pages}:${limit}`)
       .setLabel("⏭️")
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page >= pages),
