@@ -1,5 +1,11 @@
 // commands/utility/rapport-semaine.js
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} = require("discord.js");
 const { getLastReset, listReports, getReportCount } = require("../../services/rapportJugement.db");
 const { mentionify } = require("../../src/utils/rapportJugementFormat");
 
@@ -14,21 +20,10 @@ function cut(str, max = 120) {
   return s.slice(0, max - 1) + "…";
 }
 
-function chunkBlocksIntoFields(blocks, maxLen = 950) {
-  const fields = [];
-  let current = "";
-
-  for (const b of blocks) {
-    const next = current ? current + "\n\n" + b : b;
-    if (next.length > maxLen) {
-      if (current) fields.push(current);
-      current = b;
-    } else {
-      current = next;
-    }
-  }
-  if (current) fields.push(current);
-  return fields;
+function clampLen(str, max = 1000) {
+  const s = String(str ?? "");
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1) + "…";
 }
 
 function yn(v) {
@@ -47,21 +42,30 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    const limit = Math.min(Math.max(interaction.options.getInteger("limit") ?? 30, 1), 120);
+    const perPage = 10;
+    const limit = Math.min(Math.max(interaction.options.getInteger("limit") ?? 30, 1), 500);
+    const page = 1;
 
     const lastReset = await getLastReset(interaction.guildId);
     const sinceDate = lastReset?.reset_at ? new Date(lastReset.reset_at) : null;
 
     const total = await getReportCount(interaction.guildId, sinceDate);
-    const rows = await listReports(interaction.guildId, sinceDate, limit);
+    const cappedTotal = Math.min(total, limit);
+    const pages = Math.max(1, Math.ceil(cappedTotal / perPage));
+
+    const offset = (page - 1) * perPage;
+    const fetchLimit = Math.min(perPage, Math.max(0, cappedTotal - offset));
+    const rows = fetchLimit > 0 ? await listReports(interaction.guildId, sinceDate, fetchLimit, offset) : [];
 
     const header = lastReset?.reset_at
       ? `Depuis le reset : <t:${Math.floor(new Date(lastReset.reset_at).getTime() / 1000)}:F>`
       : "Aucun reset : depuis le début.";
 
     const embed = new EmbedBuilder()
-      .setTitle("🧾 Rapports de jugement de la semaine")
-      .setDescription(`${header}\n**Total période : ${total}** • **Affichés : ${rows.length}/${limit}**`)
+      .setTitle("🧾 Rapports de jugement — Semaine")
+      .setDescription(
+        `${header}\n**Total période : ${total}** • **Parcourables : ${cappedTotal}** • **Page : ${page}/${pages}**`
+      )
       .setColor(0x2b2d31);
 
     if (!rows.length) {
@@ -69,14 +73,13 @@ module.exports = {
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
-    const blocks = rows.map((r) => {
+    rows.forEach((r, idx) => {
       const ts = r.date_jugement_unix
         ? Number(r.date_jugement_unix)
         : Math.floor(new Date(r.created_at).getTime() / 1000);
 
       const suspect = `${safe(r.nom)} ${safe(r.prenom)}`;
 
-      // ✅ mentions si possible
       const juge = mentionify(r.judge_name);
       const proc = mentionify(r.procureur);
       const avocat = mentionify(r.avocat);
@@ -88,28 +91,53 @@ module.exports = {
       const tigEnt = tigOui ? safe(r.tig_entreprise) : "/";
 
       const obs = cut(r.observation, 140);
-
-      // ✅ Enregistré par = mention direct
       const by = r.reporter_user_id ? `<@${r.reporter_user_id}>` : "/";
 
-      return [
-        `🗓️ **Date**: <t:${ts}:d> • 👤 **Suspect**: **${suspect}**`,
-        `⚖️ **Juge**: ${juge} • 🧑‍⚖️ **Proc**: ${proc} • 🧑‍💼 **Avocat**: ${avocat}`,
-        `💰 **Peine**: ${peine} • **Amende**: ${amende} • **TIG**: ${yn(tigOui)}${tigOui ? ` (**${tigEnt}**)` : ""}`,
-        `📝 **Obs**: ${obs}`,
-        `✍️ **Enregistré par**: ${by}`,
-      ].join("\n");
-    });
+      const value = clampLen(
+        [
+          `⚖️ **Juge**: ${juge} • 🧑‍⚖️ **Proc**: ${proc} • 🧑‍💼 **Avocat**: ${avocat}`,
+          `💰 **Peine**: ${peine} • **Amende**: ${amende} • **TIG**: ${yn(tigOui)}${tigOui ? ` (**${tigEnt}**)` : ""}`,
+          `📝 **Obs**: ${obs}`,
+          `✍️ **Enregistré par**: ${by}`,
+        ].join("\n"),
+        1000
+      );
 
-    const fields = chunkBlocksIntoFields(blocks);
-
-    fields.forEach((value, idx) => {
       embed.addFields({
-        name: `Rapports (${idx + 1}/${fields.length})`,
+        name: `#${offset + idx + 1} • <t:${ts}:d> • ${suspect}`,
         value,
       });
     });
 
-    return interaction.reply({ embeds: [embed], ephemeral: true });
+    const ownerId = interaction.user.id;
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`rjrep:week:${ownerId}:1:${limit}`)
+        .setLabel("⏮️")
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(page <= 1),
+      new ButtonBuilder()
+        .setCustomId(`rjrep:week:${ownerId}:${page - 1}:${limit}`)
+        .setLabel("⬅️")
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(page <= 1),
+      new ButtonBuilder()
+        .setCustomId(`rjrep:week:${ownerId}:${page + 1}:${limit}`)
+        .setLabel("➡️")
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(page >= pages),
+      new ButtonBuilder()
+        .setCustomId(`rjrep:week:${ownerId}:${pages}:${limit}`)
+        .setLabel("⏭️")
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(page >= pages),
+      new ButtonBuilder()
+        .setCustomId(`rjrepgo:week:${ownerId}:${pages}:${limit}`)
+        .setLabel("🔎 Aller")
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(pages <= 1)
+    );
+
+    return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
   },
 };
