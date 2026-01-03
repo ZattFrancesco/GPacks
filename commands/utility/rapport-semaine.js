@@ -1,18 +1,17 @@
-const { EmbedBuilder } = require('discord.js');
-const { buildPaginationComponents } = require('../../utils/pagination');
-const {
-  listReportsWeek,
-  countReportsWeek
-} = require('../../services/rapportJugement.db');
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { buildPaginationComponents } = require("../../utils/pagination");
+const { listReportsWeek, countReportsWeek } = require("../../services/rapportJugement.db");
 
 const PAGE_SIZE = 10;
 
 module.exports = {
-  name: 'rapport-semaine',
-  description: 'Afficher les rapports de la semaine avec pagination',
+  data: new SlashCommandBuilder()
+    .setName("rapport-semaine")
+    .setDescription("Afficher les rapports de la semaine avec pagination"),
 
   async execute(interaction) {
     const page = 1;
+
     const total = await countReportsWeek();
     const maxPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -20,7 +19,7 @@ module.exports = {
 
     if (!reports.length) {
       return interaction.reply({
-        content: '❌ Aucun rapport cette semaine.',
+        content: "❌ Aucun rapport cette semaine.",
         ephemeral: true
       });
     }
@@ -43,20 +42,20 @@ module.exports = {
 };
 
 function truncate(str, max = 700) {
-  if (!str) return '—';
-  return str.length > max ? str.slice(0, max) + '…' : str;
+  if (!str) return "—";
+  return str.length > max ? str.slice(0, max) + "…" : str;
 }
 
 function buildEmbed(reports, page, maxPage) {
   const embed = new EmbedBuilder()
-    .setTitle('📄 Rapports – Semaine')
+    .setTitle("📄 Rapports – Semaine")
     .setColor(0x2b2d31)
     .setFooter({ text: `Page ${page} / ${maxPage}` });
 
   for (const r of reports) {
     embed.addFields({
       name: `Rapport #${r.id}`,
-      value: truncate(r.observation || r.faits)
+      value: truncate(r.observation || r.faits || "—")
     });
   }
 
