@@ -29,14 +29,16 @@ async function buildConfigEmbed(client) {
     defconDb.getDefconMessage(3),
   ]);
 
-  const channelText = cId ? `<#${cId}> (${cId})` : "❌ Aucun salon configuré";
   const e = new EmbedBuilder()
     .setTitle("Dashboard DEFCON (global)")
-    .setDescription("Configure les messages DEFCON. Les changements sont **globaux** (pas par serveur).")
+    .setDescription(
+      "Configure les messages DEFCON. Les changements sont **globaux** (pas par serveur).\n" +
+        "Le **salon d'envoi** se configure **par serveur** via `/set-defcon-channel`."
+    )
     .addFields(
       {
         name: "Salon d'envoi",
-        value: channelText,
+        value: "📌 Configuré **par serveur** avec `/set-defcon-channel`.",
         inline: false,
       },
       {
@@ -44,23 +46,28 @@ async function buildConfigEmbed(client) {
         value:
           `Couleur: **${formatColor(d1?.color)}**\n` +
           `Footer: ${d1?.footer ? `**${clip(d1.footer, 60)}**` : "_(vide)_"}\n` +
-          `Message: ${d1?.message ? `\n> ${clip(d1.message, 250).replace(/\n/g, "\n> ")}` : "_(vide)_"}`
+          `Message: ${d1?.message ? `\n> ${clip(d1.message, 250).replace(/\n/g, "\n> ")}` : "_(vide)_"}`,
       },
       {
         name: "DEFCON 2",
         value:
           `Couleur: **${formatColor(d2?.color)}**\n` +
           `Footer: ${d2?.footer ? `**${clip(d2.footer, 60)}**` : "_(vide)_"}\n` +
-          `Message: ${d2?.message ? `\n> ${clip(d2.message, 250).replace(/\n/g, "\n> ")}` : "_(vide)_"}`
+          `Message: ${d2?.message ? `\n> ${clip(d2.message, 250).replace(/\n/g, "\n> ")}` : "_(vide)_"}`,
       },
       {
         name: "DEFCON 3",
         value:
           `Couleur: **${formatColor(d3?.color)}**\n` +
           `Footer: ${d3?.footer ? `**${clip(d3.footer, 60)}**` : "_(vide)_"}\n` +
-          `Message: ${d3?.message ? `\n> ${clip(d3.message, 250).replace(/\n/g, "\n> ")}` : "_(vide)_"}`
-      },
+          `Message: ${d3?.message ? `\n> ${clip(d3.message, 250).replace(/\n/g, "\n> ")}` : "_(vide)_"}`,
+      }
     );
+
+  // (optionnel) petite trace visuelle de quel bot répond
+  if (client?.user?.username) {
+    e.setFooter({ text: `Bot: ${client.user.username}` });
+  }
 
   return e;
 }
