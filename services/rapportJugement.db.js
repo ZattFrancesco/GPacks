@@ -195,9 +195,9 @@ async function getCountsByJudge(guildId, sinceDate = null) {
 }
 
 /**
- * ✅ NOUVEAU : liste des rapports (pagination: limit + offset)
+ * ✅ NOUVEAU : liste des rapports (pour paie fin de semaine)
  */
-async function listReports(guildId, sinceDate = null, limit = 200, offset = 0) {
+async function listReports(guildId, sinceDate = null, limit = 200) {
   if (!guildId) return [];
   await ensureTables();
 
@@ -210,29 +210,28 @@ async function listReports(guildId, sinceDate = null, limit = 200, offset = 0) {
   }
 
   params.push(Number(limit) || 200);
-  params.push(Number(offset) || 0);
 
-  const rows = await query(
-    `SELECT
-        id,
-        reporter_user_id,
-        created_at,
-        date_jugement_unix,
-        nom, prenom,
-        judge_name,
-        procureur,
-        avocat,
-        peine,
-        amende,
-        tig,
-        tig_entreprise,
-        observation
-     FROM doj_jugement_reports
-     WHERE ${where}
-     ORDER BY created_at DESC
-     LIMIT ? OFFSET ?`,
-    params
-  );
+const rows = await query(
+  `SELECT
+      id,
+      reporter_user_id,
+      created_at,
+      date_jugement_unix,
+      nom, prenom,
+      judge_name,
+      procureur,
+      avocat,
+      peine,
+      amende,
+      tig,
+      tig_entreprise,
+      observation
+   FROM doj_jugement_reports
+   WHERE ${where}
+   ORDER BY created_at DESC
+   LIMIT ?`,
+  params
+);
 
   return rows || [];
 }
@@ -262,49 +261,12 @@ async function getReportCount(guildId, sinceDate = null) {
   return Number(rows?.[0]?.cnt || 0);
 }
 
-/**
- * ✅ AJOUTS COMPAT PAGINATION COMMANDES
- * On expose des helpers avec les noms attendus par /rapport-semaine et /rapport-alltime.
- */
-
-// Semaine = depuis le dernier reset si présent, sinon 7 jours glissants.
-async function _getWeekSinceDate(guildId) {
-  const lastReset = await getLastReset(guildId);
-  if (lastReset?.reset_at) return lastReset.reset_at;
-  return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-}
-
-async function listReportsWeek(guildId, offset = 0, limit = 10) {
-  const since = await _getWeekSinceDate(guildId);
-  return listReports(guildId, since, limit, offset);
-}
-
-async function countReportsWeek(guildId) {
-  const since = await _getWeekSinceDate(guildId);
-  return getReportCount(guildId, since);
-}
-
-async function listReportsAll(guildId, offset = 0, limit = 10) {
-  return listReports(guildId, null, limit, offset);
-}
-
-async function countReportsAll(guildId) {
-  return getReportCount(guildId, null);
-}
-
 module.exports = {
   ensureTables,
   getLastReset,
   addWeekReset,
   insertReport,
   getCountsByJudge,
-
   listReports,
   getReportCount,
-
-  // ✅ exports pour la pagination des commandes
-  listReportsWeek,
-  countReportsWeek,
-  listReportsAll,
-  countReportsAll,
 };

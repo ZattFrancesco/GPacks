@@ -1,101 +1,106 @@
+// commands/utility/rapport-alltime.js
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
-const { buildPaginationComponents } = require("../../utils/pagination");
-const { listReportsAll, countReportsAll } = require("../../services/rapportJugement.db");
+const { listReports, getReportCount } = require("../../services/rapportJugement.db");
+const { mentionify } = require("../../src/utils/rapportJugementFormat");
 
-const PAGE_SIZE = 6;
-
-function cut(str, max = 160) {
-  if (!str) return "—";
-  const s = String(str).replace(/\s+/g, " ").trim();
-  return s.length > max ? s.slice(0, max - 1) + "…" : s;
+function safe(v, fallback = "/") {
+  const t = (v ?? "").toString().trim();
+  return t.length ? t : fallback;
 }
 
-function toDiscordDate(unixSeconds) {
-  if (!unixSeconds) return null;
-  const n = Number(unixSeconds);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return `<t:${Math.floor(n)}:f>`;
+function cut(str, max = 120) {
+  const s = safe(str, "/");
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1) + "…";
 }
 
-function maybeMentionOrText(value) {
-  if (!value) return null;
-  const s = String(value).trim();
-  if (/^<@!?\d{16,20}>$/.test(s)) return s;
-  return s;
-}
+function chunkBlocksIntoFields(blocks, maxLen = 950) {
+  const fields = [];
+  let current = "";
 
-function formatJugement4Lignes(r) {
-  const date =
-    toDiscordDate(r.date_jugement_unix) ||
-    toDiscordDate(Math.floor(new Date(r.created_at).getTime() / 1000)) ||
-    "—";
-
-  const juge = r.judge_user_id ? `<@${r.judge_user_id}>` : (r.judge_name || "—");
-  const proc = maybeMentionOrText(r.procureur);
-  const avocat = maybeMentionOrText(r.avocat);
-
-  const rolesLine = [ `👨‍⚖️ ${juge}`, proc ? `🧑‍⚖️ ${proc}` : null, avocat ? `🛡️ ${avocat}` : null ]
-    .filter(Boolean)
-    .join(" • ");
-
-  const tigTxt = r.tig ? "Oui" : "Non";
-  const ent = r.tig_entreprise || "—";
-
-  return [
-    `⚖️ **Jugement #${r.id}** — ${date}`,
-    rolesLine,
-    `⚙️ Peine: ${r.peine || "—"} • 💸 Amende: ${r.amende || "—"} • TIG: ${tigTxt} • 🏢 Entreprise: ${ent}`,
-    `📝 ${cut(r.observation, 170)}`,
-  ].join("\n");
-}
-
-function buildEmbed({ reports, page, maxPage, total }) {
-  const embed = new EmbedBuilder()
-    .setTitle("📚 Rapports de jugement — All time")
-    .setColor(0x2b2d31)
-    .setFooter({ text: `Page ${page} / ${maxPage} — Total: ${total}` });
-
-  let desc = "";
-  for (const r of reports) {
-    const block = formatJugement4Lignes(r);
-    const candidate = desc ? `${desc}\n\n${block}` : block;
-    if (candidate.length > 3800) break;
-    desc = candidate;
+  for (const b of blocks) {
+    const next = current ? current + "\n\n" + b : b;
+    if (next.length > maxLen) {
+      if (current) fields.push(current);
+      current = b;
+    } else {
+      current = next;
+    }
   }
+  if (current) fields.push(current);
+  return fields;
+}
 
-  embed.setDescription(desc || "—");
-  return embed;
+function yn(v) {
+  return v ? "Oui" : "Non";
 }
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("rapport-alltime")
-    .setDescription("Afficher tous les rapports de jugement (condensé + pagination)"),
+    .setDescription("Liste détaillée de tous les rapports (historique complet)")
+    .addIntegerOption((opt) =>
+      opt
+        .setName("limit")
+        .setDescription("Nombre max de rapports (défaut 30, max 120)")
+        .setRequired(false)
+    ),
 
   async execute(interaction) {
-    if (!interaction.guildId) {
-      return interaction.reply({ content: "❌ Utilisable uniquement dans un serveur.", ephemeral: true });
+    const limit = Math.min(Math.max(interaction.options.getInteger("limit") ?? 30, 1), 120);
+
+    const total = await getReportCount(interaction.guildId, null);
+    const rows = await listReports(interaction.guildId, null, limit);
+
+    const embed = new EmbedBuilder()
+      .setTitle("📚 Rapports de jugement — Alltime")
+      .setDescription(`Historique complet.\n**Total : ${total}** • **Affichés : ${rows.length}/${limit}**`)
+      .setColor(0x2b2d31);
+
+    if (!rows.length) {
+      embed.addFields({ name: "Rapports", value: "_Aucun rapport enregistré._" });
+      return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
-    const guildId = interaction.guildId;
-    const page = 1;
+    const blocks = rows.map((r) => {
+      const ts = r.date_jugement_unix
+        ? Number(r.date_jugement_unix)
+        : Math.floor(new Date(r.created_at).getTime() / 1000);
 
-    const total = await countReportsAll(guildId);
-    if (!total) {
-      return interaction.reply({ content: "❌ Aucun rapport de jugement enregistré.", ephemeral: true });
-    }
+      const suspect = `${safe(r.nom)} ${safe(r.prenom)}`;
 
-    const maxPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
-    const offset = (page - 1) * PAGE_SIZE;
+      const juge = mentionify(r.judge_name);
+      const proc = mentionify(r.procureur);
+      const avocat = mentionify(r.avocat);
 
-    const reports = await listReportsAll(guildId, offset, PAGE_SIZE);
+      const peine = cut(r.peine, 80);
+      const amende = cut(r.amende, 40);
 
-    const embed = buildEmbed({ reports, page, maxPage, total });
+      const tigOui = Number(r.tig) === 1;
+      const tigEnt = tigOui ? safe(r.tig_entreprise) : "/";
 
-    const msg = await interaction.reply({ embeds: [embed], fetchReply: true });
+      const obs = cut(r.observation, 140);
 
-    await interaction.editReply({
-      components: buildPaginationComponents({ page, maxPage, messageId: msg.id }),
+      const by = r.reporter_user_id ? `<@${r.reporter_user_id}>` : "/";
+
+      return [
+        `🗓️ **Date**: <t:${ts}:d> • 👤 **Suspect**: **${suspect}**`,
+        `⚖️ **Juge**: ${juge} • 🧑‍⚖️ **Proc**: ${proc} • 🧑‍💼 **Avocat**: ${avocat}`,
+        `💰 **Peine**: ${peine} • **Amende**: ${amende} • **TIG**: ${yn(tigOui)}${tigOui ? ` (**${tigEnt}**)` : ""}`,
+        `📝 **Obs**: ${obs}`,
+        `✍️ **Enregistré par**: ${by}`,
+      ].join("\n");
     });
+
+    const fields = chunkBlocksIntoFields(blocks);
+
+    fields.forEach((value, idx) => {
+      embed.addFields({
+        name: `Rapports (${idx + 1}/${fields.length})`,
+        value,
+      });
+    });
+
+    return interaction.reply({ embeds: [embed], ephemeral: true });
   },
 };
