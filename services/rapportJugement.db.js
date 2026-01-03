@@ -194,10 +194,17 @@ async function getCountsByJudge(guildId, sinceDate = null) {
   }));
 }
 
+function normalizeSearch(raw) {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+  // On coupe pour éviter de gonfler les paramètres et limiter les abus
+  return s.slice(0, 80);
+}
+
 /**
  * ✅ NOUVEAU : liste des rapports (pour paie fin de semaine)
  */
-async function listReports(guildId, sinceDate = null, limit = 200) {
+async function listReports(guildId, sinceDate = null, limit = 200, offset = 0, search = null) {
   if (!guildId) return [];
   await ensureTables();
 
@@ -209,7 +216,19 @@ async function listReports(guildId, sinceDate = null, limit = 200) {
     params.push(sinceDate);
   }
 
-  params.push(Number(limit) || 200);
+  const q = normalizeSearch(search);
+  if (q) {
+    // Recherche simple sur identité (nom/prénom)
+    where += " AND (nom LIKE ? OR prenom LIKE ? OR CONCAT(nom, ' ', prenom) LIKE ?)";
+    const like = `%${q}%`;
+    params.push(like, like, like);
+  }
+
+  const lim = Math.min(Math.max(Number(limit) || 200, 1), 500);
+  const off = Math.min(Math.max(Number(offset) || 0, 0), 1000000);
+
+  params.push(lim);
+  params.push(off);
 
 const rows = await query(
   `SELECT
@@ -229,7 +248,7 @@ const rows = await query(
    FROM doj_jugement_reports
    WHERE ${where}
    ORDER BY created_at DESC
-   LIMIT ?`,
+   LIMIT ? OFFSET ?`,
   params
 );
 
@@ -239,7 +258,7 @@ const rows = await query(
 /**
  * ✅ NOUVEAU : nombre de rapports sur la période
  */
-async function getReportCount(guildId, sinceDate = null) {
+async function getReportCount(guildId, sinceDate = null, search = null) {
   if (!guildId) return 0;
   await ensureTables();
 
@@ -249,6 +268,13 @@ async function getReportCount(guildId, sinceDate = null) {
   if (sinceDate) {
     where += " AND created_at >= ?";
     params.push(sinceDate);
+  }
+
+  const q = normalizeSearch(search);
+  if (q) {
+    where += " AND (nom LIKE ? OR prenom LIKE ? OR CONCAT(nom, ' ', prenom) LIKE ?)";
+    const like = `%${q}%`;
+    params.push(like, like, like);
   }
 
   const rows = await query(

@@ -1,5 +1,5 @@
-// modals/rapportPaginationGoModal.js
-// Modal "Aller à une page" pour la pagination des rapports
+// buttons/rapportPaginationClearButton.js
+// Bouton "Reset" : enlève le filtre de recherche (nom) et revient page 1
 
 const {
   ActionRowBuilder,
@@ -10,7 +10,7 @@ const {
 
 const { getLastReset, listReports, getReportCount } = require("../services/rapportJugement.db");
 const { mentionify } = require("../src/utils/rapportJugementFormat");
-const { getSession } = require("../src/utils/rjReportSessions");
+const { getSession, updateSession } = require("../src/utils/rjReportSessions");
 
 function safe(v, fallback = "/") {
   const t = (v ?? "").toString().trim();
@@ -23,8 +23,6 @@ function cut(str, max = 120) {
   return s.slice(0, max - 1) + "…";
 }
 
-// Discord limite un embed à 6000 caractères.
-// Avec 10 rapports/page, on tronque fort pour éviter MAX_EMBED_SIZE_EXCEEDED.
 function clampLen(str, max = 420) {
   const s = String(str ?? "");
   if (s.length <= max) return s;
@@ -80,16 +78,15 @@ function buildComponents(mode, ownerId, session, page, pages, limit, hasFilter) 
 }
 
 module.exports = {
-  idPrefix: "rjrepgoModal:",
+  idPrefix: "rjrepclear:",
 
   async execute(interaction) {
-    // rjrepgoModal:<mode>:<ownerId>:<session>:<pages>:<limit>
+    // rjrepclear:<mode>:<ownerId>:<session>:<limit>
     const parts = String(interaction.customId || "").split(":");
     const mode = parts[1];
     const ownerId = parts[2];
     const session = parts[3];
-    const pagesProvided = Number(parts[4]);
-    const limitRaw = Number(parts[5]);
+    const limitRaw = Number(parts[4]);
 
     if (!ownerId || interaction.user.id !== ownerId) {
       return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
@@ -103,8 +100,12 @@ module.exports = {
       return interaction.reply({ content: "⏱️ Session expirée (15 min). Relance la commande.", ephemeral: true });
     }
 
+    // On enlève le filtre
+    updateSession(interaction.guildId, ownerId, session, { search: null });
+
     const perPage = 10;
     const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 30;
+    const page = 1;
 
     let sinceDate = null;
     let header = "Historique complet.";
@@ -120,39 +121,24 @@ module.exports = {
       title = "🧾 Rapports de jugement — Semaine";
     }
 
-    const search = sess.search || null;
-
-    const total = await getReportCount(interaction.guildId, sinceDate, search);
+    const total = await getReportCount(interaction.guildId, sinceDate, null);
     const cappedTotal = Math.min(total, limit);
     const pages = Math.max(1, Math.ceil(cappedTotal / perPage));
 
-    // sécurité : si quelqu'un clique après changement de total, on ne fait pas confiance aux pages dans le customId
-    const maxPages = Number.isFinite(pagesProvided) ? Math.max(1, pagesProvided) : pages;
-    const effectivePages = Math.min(pages, maxPages);
-
-    const raw = (interaction.fields.getTextInputValue("page") || "").trim();
-    const parsed = Number(raw);
-    let page = Number.isFinite(parsed) ? Math.trunc(parsed) : 1;
-    page = Math.min(Math.max(page, 1), effectivePages);
-
-    const offset = (page - 1) * perPage;
-    const fetchLimit = Math.min(perPage, Math.max(0, cappedTotal - offset));
-    const rows = fetchLimit > 0 ? await listReports(interaction.guildId, sinceDate, fetchLimit, offset, search) : [];
+    const offset = 0;
+    const fetchLimit = Math.min(perPage, Math.max(0, cappedTotal));
+    const rows = fetchLimit > 0 ? await listReports(interaction.guildId, sinceDate, fetchLimit, offset, null) : [];
 
     const embed = new EmbedBuilder()
       .setTitle(title)
-      .setDescription(
-        `${header}` +
-          `${search ? `\n🔎 Filtre : **${safe(search, "/")}**` : ""}` +
-          `\n**Total : ${total}** • **Parcourables : ${cappedTotal}** • **Page : ${page}/${pages}**`
-      )
+      .setDescription(`${header}\n**Total : ${total}** • **Parcourables : ${cappedTotal}** • **Page : 1/${pages}**`)
       .setColor(0x2b2d31);
 
     if (!rows.length) {
       embed.addFields({ name: "Rapports", value: "_Aucun rapport._" });
       return interaction.update({
         embeds: [embed],
-        components: buildComponents(mode, ownerId, session, page, pages, limit, !!search),
+        components: buildComponents(mode, ownerId, session, 1, pages, limit, false),
       });
     }
 
@@ -172,7 +158,6 @@ module.exports = {
       const tigOui = Number(r.tig) === 1;
       const tigEnt = tigOui ? safe(r.tig_entreprise) : "/";
 
-      // "observation" est souvent le champ le plus long : on le coupe plus fort.
       const obs = cut(r.observation, 110);
       const by = r.reporter_user_id ? `<@${r.reporter_user_id}>` : "/";
 
@@ -193,7 +178,7 @@ module.exports = {
 
     return interaction.update({
       embeds: [embed],
-      components: buildComponents(mode, ownerId, session, page, pages, limit, !!search),
+      components: buildComponents(mode, ownerId, session, 1, pages, limit, false),
     });
   },
 };

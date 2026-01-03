@@ -1,7 +1,17 @@
 // commands/utility/rapport-semaine.js
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+// Version paginée + recherche par nom (évite les embeds trop gros)
+
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} = require("discord.js");
+
 const { getLastReset, listReports, getReportCount } = require("../../services/rapportJugement.db");
 const { mentionify } = require("../../src/utils/rapportJugementFormat");
+const { createSession } = require("../../src/utils/rjReportSessions");
 
 function safe(v, fallback = "/") {
   const t = (v ?? "").toString().trim();
@@ -14,69 +24,119 @@ function cut(str, max = 120) {
   return s.slice(0, max - 1) + "…";
 }
 
-function chunkBlocksIntoFields(blocks, maxLen = 950) {
-  const fields = [];
-  let current = "";
-
-  for (const b of blocks) {
-    const next = current ? current + "\n\n" + b : b;
-    if (next.length > maxLen) {
-      if (current) fields.push(current);
-      current = b;
-    } else {
-      current = next;
-    }
-  }
-  if (current) fields.push(current);
-  return fields;
+function clampLen(str, max = 420) {
+  const s = String(str ?? "");
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1) + "…";
 }
 
 function yn(v) {
   return v ? "Oui" : "Non";
 }
 
+function buildComponents(mode, ownerId, session, page, pages, limit, hasFilter) {
+  const row1 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:1:${limit}`)
+      .setLabel("⏮️")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(page <= 1),
+    new ButtonBuilder()
+      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:${page - 1}:${limit}`)
+      .setLabel("⬅️")
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(page <= 1),
+    new ButtonBuilder()
+      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:${page + 1}:${limit}`)
+      .setLabel("➡️")
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(page >= pages),
+    new ButtonBuilder()
+      .setCustomId(`rjrep:${mode}:${ownerId}:${session}:${pages}:${limit}`)
+      .setLabel("⏭️")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(page >= pages),
+    new ButtonBuilder()
+      .setCustomId(`rjrepgo:${mode}:${ownerId}:${session}:${pages}:${limit}`)
+      .setLabel("🔎 Aller")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(pages <= 1)
+  );
+
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`rjrepsearch:${mode}:${ownerId}:${session}:${limit}`)
+      .setLabel("🔎 Nom")
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`rjrepclear:${mode}:${ownerId}:${session}:${limit}`)
+      .setLabel("♻️ Reset")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(!hasFilter)
+  );
+
+  return [row1, row2];
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("rapport-semaine")
-    .setDescription("Liste détaillée des rapports depuis le dernier reset (format paie)")
+    .setDescription("Rapports depuis le dernier reset (paginés + recherche)")
     .addIntegerOption((opt) =>
       opt
         .setName("limit")
-        .setDescription("Nombre max de rapports (défaut 30, max 120)")
+        .setDescription("Nombre max de rapports parcourables (défaut 200, max 500)")
+        .setRequired(false)
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("nom")
+        .setDescription("Filtre: nom ou prénom du suspect (optionnel)")
         .setRequired(false)
     ),
 
   async execute(interaction) {
-    const limit = Math.min(Math.max(interaction.options.getInteger("limit") ?? 30, 1), 120);
+    const ownerId = interaction.user.id;
+    const limit = Math.min(Math.max(interaction.options.getInteger("limit") ?? 200, 1), 500);
+    const search = (interaction.options.getString("nom") || "").trim() || null;
 
     const lastReset = await getLastReset(interaction.guildId);
     const sinceDate = lastReset?.reset_at ? new Date(lastReset.reset_at) : null;
 
-    const total = await getReportCount(interaction.guildId, sinceDate);
-    const rows = await listReports(interaction.guildId, sinceDate, limit);
+    const session = createSession(interaction.guildId, ownerId, { search });
+
+    const perPage = 10;
+    const total = await getReportCount(interaction.guildId, sinceDate, search);
+    const cappedTotal = Math.min(total, limit);
+    const pages = Math.max(1, Math.ceil(cappedTotal / perPage));
+    const page = 1;
+
+    const rows = cappedTotal > 0 ? await listReports(interaction.guildId, sinceDate, Math.min(perPage, cappedTotal), 0, search) : [];
 
     const header = lastReset?.reset_at
       ? `Depuis le reset : <t:${Math.floor(new Date(lastReset.reset_at).getTime() / 1000)}:F>`
       : "Aucun reset : depuis le début.";
 
     const embed = new EmbedBuilder()
-      .setTitle("🧾 Rapports de jugement de la semaine")
-      .setDescription(`${header}\n**Total période : ${total}** • **Affichés : ${rows.length}/${limit}**`)
+      .setTitle("🧾 Rapports de jugement — Semaine")
+      .setDescription(
+        `${header}` +
+          `${search ? `\n🔎 Filtre : **${safe(search, "/")}**` : ""}` +
+          `\n**Total : ${total}** • **Parcourables : ${cappedTotal}** • **Page : ${page}/${pages}**`
+      )
       .setColor(0x2b2d31);
 
     if (!rows.length) {
-      embed.addFields({ name: "Rapports", value: "_Aucun rapport sur la période._" });
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      embed.addFields({ name: "Rapports", value: "_Aucun rapport._" });
+      return interaction.reply({ embeds: [embed], components: buildComponents("week", ownerId, session, page, pages, limit, !!search), ephemeral: true });
     }
 
-    const blocks = rows.map((r) => {
+    rows.forEach((r, idx) => {
       const ts = r.date_jugement_unix
         ? Number(r.date_jugement_unix)
         : Math.floor(new Date(r.created_at).getTime() / 1000);
 
       const suspect = `${safe(r.nom)} ${safe(r.prenom)}`;
-
-      // ✅ mentions si possible
       const juge = mentionify(r.judge_name);
       const proc = mentionify(r.procureur);
       const avocat = mentionify(r.avocat);
@@ -87,29 +147,25 @@ module.exports = {
       const tigOui = Number(r.tig) === 1;
       const tigEnt = tigOui ? safe(r.tig_entreprise) : "/";
 
-      const obs = cut(r.observation, 140);
-
-      // ✅ Enregistré par = mention direct
+      const obs = cut(r.observation, 110);
       const by = r.reporter_user_id ? `<@${r.reporter_user_id}>` : "/";
 
-      return [
-        `🗓️ **Date**: <t:${ts}:d> • 👤 **Suspect**: **${suspect}**`,
-        `⚖️ **Juge**: ${juge} • 🧑‍⚖️ **Proc**: ${proc} • 🧑‍💼 **Avocat**: ${avocat}`,
-        `💰 **Peine**: ${peine} • **Amende**: ${amende} • **TIG**: ${yn(tigOui)}${tigOui ? ` (**${tigEnt}**)` : ""}`,
-        `📝 **Obs**: ${obs}`,
-        `✍️ **Enregistré par**: ${by}`,
-      ].join("\n");
+      const value = clampLen(
+        [
+          `⚖️ **Juge**: ${juge} • 🧑‍⚖️ **Proc**: ${proc} • 🧑‍💼 **Avocat**: ${avocat}`,
+          `💰 **Peine**: ${peine} • **Amende**: ${amende} • **TIG**: ${yn(tigOui)}${tigOui ? ` (**${tigEnt}**)` : ""}`,
+          `📝 **Obs**: ${obs}`,
+          `✍️ **Enregistré par**: ${by}`,
+        ].join("\n")
+      );
+
+      embed.addFields({ name: `#${idx + 1} • <t:${ts}:d> • ${suspect}`, value });
     });
 
-    const fields = chunkBlocksIntoFields(blocks);
-
-    fields.forEach((value, idx) => {
-      embed.addFields({
-        name: `Rapports (${idx + 1}/${fields.length})`,
-        value,
-      });
+    return interaction.reply({
+      embeds: [embed],
+      components: buildComponents("week", ownerId, session, page, pages, limit, !!search),
+      ephemeral: true,
     });
-
-    return interaction.reply({ embeds: [embed], ephemeral: true });
   },
 };
