@@ -66,9 +66,12 @@ async function ensureTables() {
 
 async function getDefconMessage(level) {
   await ensureTables();
-  const [rows] = await query(`SELECT level, message, color, footer FROM doj_defcon_messages WHERE level = ?`, [
-    Number(level),
-  ]);
+  // NOTE: services/db.js::query() retourne DIRECTEMENT `rows` (Array),
+  // pas une tuple [rows, fields]. Donc on ne doit PAS destructurer.
+  const rows = await query(
+    `SELECT level, message, color, footer FROM doj_defcon_messages WHERE level = ?`,
+    [Number(level)]
+  );
   return rows?.[0] || null;
 }
 
@@ -84,7 +87,7 @@ async function upsertDefconMessage({ level, message, color, footer }) {
 
 async function getChannelConfig(guildId) {
   await ensureTables();
-  const [rows] = await query(
+  const rows = await query(
     `SELECT guild_id, channel_id, ping_role_id, last_message_id
      FROM doj_defcon_channels WHERE guild_id = ?`,
     [String(guildId)]
@@ -94,7 +97,7 @@ async function getChannelConfig(guildId) {
 
 async function getAllChannelConfigs() {
   await ensureTables();
-  const [rows] = await query(
+  const rows = await query(
     `SELECT guild_id, channel_id, ping_role_id, last_message_id
      FROM doj_defcon_channels
      WHERE channel_id IS NOT NULL`
