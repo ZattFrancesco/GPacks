@@ -303,7 +303,9 @@ async function getReportCount(guildId, sinceDate = null, search = null) {
   if (!guildId) return 0;
   await ensureTables();
 
-  const params = [guildId];
+  // `applyNameSearch` peut retourner une nouvelle version de `params`.
+  // Donc `params` doit être réassignable (sinon erreur: "Assignment to constant variable").
+  let params = [guildId];
   let where = "guild_id = ?";
 
   if (sinceDate) {
