@@ -42,22 +42,56 @@ async function ensureTables() {
 
 function pad2(n) {
   const x = Number(n);
+  if (!Number.isFinite(x)) return null;
   return String(x).padStart(2, "0");
 }
 
+function isValidDateObj(d) {
+  return d instanceof Date && !Number.isNaN(d.getTime());
+}
+
+function normalizeMysqlDate(mysqlDate) {
+  const s = String(mysqlDate || "").trim();
+  // Accept only YYYY-MM-DD
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+
+  const [y, mo, da] = s.split("-").map(Number);
+  if (!Number.isInteger(y) || !Number.isInteger(mo) || !Number.isInteger(da)) return null;
+  if (mo < 1 || mo > 12) return null;
+  if (da < 1 || da > 31) return null;
+
+  const dt = new Date(`${s}T00:00:00`);
+  // Vérifie que JS n'a pas "corrigé" la date (ex: 2026-02-31)
+  if (!isValidDateObj(dt)) return null;
+  if (dt.getFullYear() !== y || (dt.getMonth() + 1) !== mo || dt.getDate() !== da) return null;
+
+  return s;
+}
+
 function toMysqlDate(d) {
-  // d: JS Date (local)
+  // Retourne "YYYY-MM-DD" ou null si invalide
+  if (!isValidDateObj(d)) return null;
+
   const yyyy = d.getFullYear();
   const mm = pad2(d.getMonth() + 1);
   const dd = pad2(d.getDate());
+  if (!mm || !dd) return null;
+
   return `${yyyy}-${mm}-${dd}`;
 }
 
 function toMysqlDatetimeFromParts(year, month, day, hourStr) {
-  const y = Number(year);
-  const m = Number(month);
-  const d = Number(day);
+  // Retourne "YYYY-MM-DD HH:MM:00" ou null
+  const y = Number(String(year || "").trim());
+  const m = Number(String(month || "").trim());
+  const d = Number(String(day || "").trim());
 
+  if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return null;
+  if (y < 1900 || y > 2100) return null;
+  if (m < 1 || m > 12) return null;
+  if (d < 1 || d > 31) return null;
+
+  // Heure au format HH:MM
   const hm = String(hourStr || "").trim();
   const m1 = hm.match(/^(\d{1,2}):(\d{2})$/);
   if (!m1) return null;
@@ -66,11 +100,17 @@ function toMysqlDatetimeFromParts(year, month, day, hourStr) {
   const mi = Number(m1[2]);
   if (hh < 0 || hh > 23 || mi < 0 || mi > 59) return null;
 
+  // Vérifie que la date existe vraiment (ex: 31/02)
+  const test = new Date(y, m - 1, d, hh, mi, 0, 0);
+  if (!isValidDateObj(test)) return null;
+  if (test.getFullYear() !== y || (test.getMonth() + 1) !== m || test.getDate() !== d) return null;
+
   const yyyy = String(y);
   const mm = pad2(m);
   const dd = pad2(d);
   const HH = pad2(hh);
   const MI = pad2(mi);
+  if (!mm || !dd || !HH || !MI) return null;
 
   return `${yyyy}-${mm}-${dd} ${HH}:${MI}:00`;
 }
@@ -96,6 +136,7 @@ async function getPlanningMessage(guildId) {
 }
 
 async function upsertPlanningMessage({ guildId, channelId, messageId, weekMonday }) {
+  const safeWeek = normalizeMysqlDate(weekMonday) || toMysqlDate(getWeekMondayLocal());
   await query(
     `INSERT INTO judgement_planning_message (guild_id, channel_id, message_id, week_monday)
      VALUES (?, ?, ?, ?)
@@ -103,14 +144,15 @@ async function upsertPlanningMessage({ guildId, channelId, messageId, weekMonday
        channel_id = VALUES(channel_id),
        message_id = VALUES(message_id),
        week_monday = VALUES(week_monday)`,
-    [guildId, channelId, messageId, weekMonday]
+    [guildId, channelId, messageId, safeWeek]
   );
 }
 
 async function setWeekMonday(guildId, weekMonday) {
+  const safeWeek = normalizeMysqlDate(weekMonday) || toMysqlDate(getWeekMondayLocal());
   await query(
     `UPDATE judgement_planning_message SET week_monday = ? WHERE guild_id = ?`,
-    [weekMonday, guildId]
+    [safeWeek, guildId]
   );
 }
 
@@ -127,11 +169,18 @@ async function listEntriesBetween(guildId, startDt, endDt) {
 }
 
 async function listEntriesForWeek(guildId, weekMondayDate) {
-  const start = `${weekMondayDate} 00:00:00`;
+  const normalized = normalizeMysqlDate(weekMondayDate) || toMysqlDate(getWeekMondayLocal()) || null;
+  if (!normalized) return [];
+
+  const start = `${normalized} 00:00:00`;
+
   // end = next monday
-  const d = new Date(weekMondayDate + "T00:00:00");
+  const d = new Date(`${normalized}T00:00:00`);
   d.setDate(d.getDate() + 7);
-  const end = `${toMysqlDate(d)} 00:00:00`;
+
+  const endDate = toMysqlDate(d) || normalized;
+  const end = `${endDate} 00:00:00`;
+
   return listEntriesBetween(guildId, start, end);
 }
 

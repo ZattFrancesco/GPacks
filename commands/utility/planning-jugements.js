@@ -49,7 +49,7 @@ module.exports = {
 
       await upsertPlanningMessage({
         guildId,
-        channelId,
+        channelId: planningMessage.channelId,
         messageId: planningMessage.id,
         weekMonday,
       });
@@ -66,8 +66,8 @@ module.exports = {
     // s'assurer que la DB est cohérente (au cas où)
     await upsertPlanningMessage({
       guildId,
-      channelId: rec.channel_id,
-      messageId: rec.message_id,
+      channelId: planningMessage.channelId,
+      messageId: planningMessage.id,
       weekMonday: targetWeek,
     });
 

@@ -1,7 +1,7 @@
 // src/utils/judgementPlanningView.js
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { listEntriesForWeek } = require("../../services/judgementPlanning.db");
+const { listEntriesForWeek, getWeekMondayLocal, toMysqlDate } = require("../../services/judgementPlanning.db");
 
 const DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
@@ -17,8 +17,17 @@ function formatFRDate(d) {
 }
 
 function toLocalDateFromMysqlDate(mysqlDate) {
-  // mysqlDate: YYYY-MM-DD
-  return new Date(`${mysqlDate}T00:00:00`);
+  const s = String(mysqlDate || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return getWeekMondayLocal();
+
+  const d = new Date(`${s}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return getWeekMondayLocal();
+
+  // Vérifie que la date n'a pas été "corrigée"
+  const [y, m, da] = s.split("-").map(Number);
+  if (d.getFullYear() !== y || (d.getMonth() + 1) !== m || d.getDate() !== da) return getWeekMondayLocal();
+
+  return d;
 }
 
 function toLocalFromMysqlDatetime(mysqlDt) {
@@ -47,11 +56,13 @@ function buildComponents() {
 }
 
 async function buildWeeklyPlanningMessage({ guildId, weekMondayDate }) {
-  const monday = toLocalDateFromMysqlDate(weekMondayDate);
+  const raw = String(weekMondayDate || "").trim();
+  const safeWeek = (/^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : (toMysqlDate(getWeekMondayLocal()) || raw));
+  const monday = toLocalDateFromMysqlDate(safeWeek);
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
 
-  const entries = await listEntriesForWeek(guildId, weekMondayDate);
+  const entries = await listEntriesForWeek(guildId, safeWeek);
 
   // group by day index 0..6
   const byDay = Array.from({ length: 7 }, () => []);
