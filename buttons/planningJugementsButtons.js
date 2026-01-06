@@ -400,12 +400,13 @@ module.exports = {
       await setWeekMonday(guildId, newWeek);
       await refreshPlanningMessage(interaction, guildId);
 
-      // pas de spam: on répond juste en ephemeral
-      return interaction.reply({ content: `✅ Semaine affichée: ${toFR(monday)}`, ephemeral: true });
+      // ✅ Navigation silencieuse : on ACK le bouton sans envoyer de message
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferUpdate();
+      }
+      return;
     }
 
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferUpdate();
-    }
+    return interaction.reply({ content: "❌ Action inconnue.", ephemeral: true });
   },
 };
