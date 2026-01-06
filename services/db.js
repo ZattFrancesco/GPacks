@@ -36,6 +36,11 @@ function getPool() {
       user,
       password,
       database,
+      // ✅ Discord IDs (snowflakes) dépassent souvent la précision sûre de JavaScript.
+      // Si MySQL renvoie un BIGINT comme Number, l'ID peut être "arrondi" et devenir faux,
+      // ce qui provoque ensuite des erreurs DiscordAPIError[10003]/[10008].
+      supportBigNumbers: true,
+      bigNumberStrings: true,
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,

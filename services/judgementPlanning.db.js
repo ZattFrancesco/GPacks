@@ -30,12 +30,40 @@ async function ensureTables() {
   await query(`
     CREATE TABLE IF NOT EXISTS judgement_planning_message (
       guild_id BIGINT UNSIGNED PRIMARY KEY,
-      channel_id BIGINT UNSIGNED NOT NULL,
-      message_id BIGINT UNSIGNED NOT NULL,
+      -- ⚠️ Discord IDs (snowflakes) = très grands entiers.
+      -- Les stocker en BIGINT puis les lire en JS peut casser l'ID (perte de précision).
+      -- On les stocke donc en texte.
+      channel_id VARCHAR(32) NOT NULL,
+      message_id VARCHAR(32) NOT NULL,
       week_monday DATE NOT NULL,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `);
+
+  // Migration douce: si la table existait déjà en BIGINT, on convertit en VARCHAR.
+  // (Pas d'erreur si déjà bon.)
+  try {
+    const cols = await query(
+      `SELECT COLUMN_NAME, DATA_TYPE
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'judgement_planning_message'
+         AND COLUMN_NAME IN ('channel_id', 'message_id')`
+    );
+
+    const typeByName = new Map((cols || []).map(c => [String(c.COLUMN_NAME), String(c.DATA_TYPE).toLowerCase()]));
+    const chType = typeByName.get('channel_id');
+    const msgType = typeByName.get('message_id');
+
+    if (chType && chType !== 'varchar') {
+      await query(`ALTER TABLE judgement_planning_message MODIFY channel_id VARCHAR(32) NOT NULL`);
+    }
+    if (msgType && msgType !== 'varchar') {
+      await query(`ALTER TABLE judgement_planning_message MODIFY message_id VARCHAR(32) NOT NULL`);
+    }
+  } catch (_) {
+    // On ne bloque pas le bot si le user n'a pas les droits sur INFORMATION_SCHEMA.
+  }
 
   ensured = true;
 }
@@ -144,7 +172,7 @@ async function upsertPlanningMessage({ guildId, channelId, messageId, weekMonday
        channel_id = VALUES(channel_id),
        message_id = VALUES(message_id),
        week_monday = VALUES(week_monday)`,
-    [guildId, channelId, messageId, safeWeek]
+    [String(guildId), String(channelId), String(messageId), safeWeek]
   );
 }
 
