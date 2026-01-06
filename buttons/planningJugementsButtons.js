@@ -36,7 +36,13 @@ function toFR(dateObj) {
 }
 
 function toLocalDateFromMysqlDate(mysqlDate) {
-  return new Date(`${mysqlDate}T00:00:00`);
+  // mysqlDate: "YYYY-MM-DD" (ou null)
+  if (!mysqlDate || mysqlDate === "null" || mysqlDate === "undefined") {
+    return getWeekMondayLocal();
+  }
+  const d = new Date(`${mysqlDate}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return getWeekMondayLocal();
+  return d;
 }
 
 function toLocalFromMysqlDatetime(mysqlDt) {
@@ -53,7 +59,12 @@ async function refresh(interaction, guildId) {
   const msg = await ch.messages.fetch(String(rec.message_id));
   if (!msg) return false;
 
-  const { embed, components } = await buildWeeklyPlanningMessage({ guildId, weekMondayDate: rec.week_monday });
+  const safeWeek = rec.week_monday || toMysqlDate(getWeekMondayLocal());
+  // Si la DB a une ancienne valeur NULL, on la corrige.
+  if (!rec.week_monday) {
+    try { await setWeekMonday(guildId, safeWeek); } catch (_) {}
+  }
+  const { embed, components } = await buildWeeklyPlanningMessage({ guildId, weekMondayDate: safeWeek });
   await msg.edit({ embeds: [embed], components });
   return true;
 }
@@ -321,7 +332,9 @@ module.exports = {
 
       const monday = toLocalDateFromMysqlDate(rec.week_monday);
       monday.setDate(monday.getDate() + (interaction.customId === "jplan:week:prev" ? -7 : 7));
-      const newWeek = toMysqlDate(monday);
+      // Sécurité: si date invalide, on retombe sur la semaine actuelle
+      const base = Number.isNaN(monday.getTime()) ? getWeekMondayLocal() : monday;
+      const newWeek = toMysqlDate(base);
 
       await setWeekMonday(guildId, newWeek);
       await refresh(interaction, guildId);
