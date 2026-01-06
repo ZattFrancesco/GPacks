@@ -17,6 +17,14 @@ function formatFRDate(d) {
 }
 
 function toLocalDateFromMysqlDate(mysqlDate) {
+  // mysqlDate peut être un Date (mysql2) OU une string "YYYY-MM-DD".
+  if (mysqlDate instanceof Date) {
+    const d = new Date(mysqlDate);
+    if (Number.isNaN(d.getTime())) return getWeekMondayLocal();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
   const s = String(mysqlDate || "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return getWeekMondayLocal();
 
@@ -56,7 +64,8 @@ function buildComponents() {
 }
 
 async function buildWeeklyPlanningMessage({ guildId, weekMondayDate }) {
-  const raw = String(weekMondayDate || "").trim();
+  // weekMondayDate peut être un Date (mysql2) ou une string.
+  const raw = weekMondayDate instanceof Date ? (toMysqlDate(weekMondayDate) || "") : String(weekMondayDate || "").trim();
   const safeWeek = (/^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : (toMysqlDate(getWeekMondayLocal()) || raw));
   const monday = toLocalDateFromMysqlDate(safeWeek);
   const sunday = new Date(monday);

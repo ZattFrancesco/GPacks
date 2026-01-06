@@ -37,6 +37,14 @@ function toFR(dateObj) {
 
 function toLocalDateFromMysqlDate(mysqlDate) {
   // mysqlDate: "YYYY-MM-DD" (ou null)
+  // mysql2 peut renvoyer un Date pour un champ DATE.
+  if (mysqlDate instanceof Date) {
+    const d = new Date(mysqlDate);
+    if (Number.isNaN(d.getTime())) return getWeekMondayLocal();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
   if (!mysqlDate || mysqlDate === "null" || mysqlDate === "undefined") {
     return getWeekMondayLocal();
   }
