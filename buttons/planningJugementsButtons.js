@@ -399,9 +399,13 @@ module.exports = {
 
       await setWeekMonday(guildId, newWeek);
       await refreshPlanningMessage(interaction, guildId);
-      return;
+
+      // pas de spam: on répond juste en ephemeral
+      return interaction.reply({ content: `✅ Semaine affichée: ${toFR(monday)}`, ephemeral: true });
     }
 
-    return interaction.reply({ content: "❌ Action inconnue.", ephemeral: true });
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferUpdate();
+    }
   },
 };
