@@ -5,6 +5,7 @@ const {
   ensureTables,
   toMysqlDatetimeFromParts,
   getPlanningMessage,
+  setWeekMonday,
   listEntriesForWeek,
   insertEntry,
   updateEntry,
@@ -69,6 +70,8 @@ module.exports = {
     // jplanmodal:edit:step2:<idJudge>
 
     if (action === "add" && step === "step1") {
+      // customId possible: jplanmodal:add:step1 OR jplanmodal:add:step1:<weekMonday>
+      const targetWeek = String(maybeId || "").trim(); // YYYY-MM-DD (optionnel)
       const lastname = normalizeName(interaction.fields.getTextInputValue("lastname"));
       const firstname = normalizeName(interaction.fields.getTextInputValue("firstname"));
       const accusedId = normalizeName(interaction.fields.getTextInputValue("accused_id"), 50);
@@ -83,6 +86,7 @@ module.exports = {
 
       setDraft(guildId, userId, {
         mode: "add",
+        target_week_monday: targetWeek || null,
         accused_lastname: lastname,
         accused_firstname: firstname,
         accused_id: accusedId,
@@ -90,13 +94,18 @@ module.exports = {
       });
 
       const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`jplan:add:step2:${userId}`).setLabel("Continuer (date/heure)").setStyle(ButtonStyle.Primary)
+        new ButtonBuilder()
+          .setCustomId(`jplan:add:step2:${userId}:${targetWeek || ""}`)
+          .setLabel("Continuer (date/heure)")
+          .setStyle(ButtonStyle.Primary)
       );
 
       return interaction.reply({ content: "✅ Identité enregistrée. Clique pour continuer.", components: [row], ephemeral: true });
     }
 
     if (action === "add" && step === "step2") {
+      // customId possible: jplanmodal:add:step2 OR jplanmodal:add:step2:<weekMonday>
+      const targetWeek = String(maybeId || "").trim();
       const year = interaction.fields.getTextInputValue("year");
       const month = interaction.fields.getTextInputValue("month");
       const day = interaction.fields.getTextInputValue("day");
@@ -112,16 +121,25 @@ module.exports = {
         return interaction.reply({ content: "❌ Brouillon introuvable. Recommence avec ➕ Ajouter.", ephemeral: true });
       }
 
+      const weekForActions = targetWeek || String(draft.target_week_monday || "").trim();
+
       // anti doublon simple sur la semaine: même datetime + accused_id
       const rec = await getPlanningMessage(guildId);
-      if (rec) {
-        const weekEntries = await listEntriesForWeek(guildId, rec.week_monday);
+      if (rec && weekForActions) {
+        const weekEntries = await listEntriesForWeek(guildId, weekForActions);
         const dup = weekEntries.find(
           (e) => String(e.judgement_datetime).startsWith(dtStr.slice(0, 16)) && String(e.accused_id) === String(draft.accused_id)
         );
         if (dup) {
           return interaction.reply({ content: "❌ Doublon: même date/heure et même ID accusé déjà présent.", ephemeral: true });
         }
+      }
+
+      // Si la semaine cible est connue, on la met comme "semaine affichée" avant refresh
+      if (weekForActions) {
+        try {
+          await setWeekMonday(guildId, weekForActions);
+        } catch (_) {}
       }
 
       await insertEntry(guildId, {

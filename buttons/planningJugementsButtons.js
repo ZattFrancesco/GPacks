@@ -124,8 +124,11 @@ async function refreshPlanningMessage(interaction, guildId) {
   }
 }
 
-function buildAddModalStep1() {
-  const modal = new ModalBuilder().setCustomId("jplanmodal:add:step1").setTitle("Ajouter — Identité");
+function buildAddModalStep1(weekMondayStr) {
+  // On encode la semaine cible dans le customId du modal
+  // pour que l'ajout se fasse sur la semaine actuellement affichée.
+  const w = String(weekMondayStr || "").trim();
+  const modal = new ModalBuilder().setCustomId(`jplanmodal:add:step1:${w}`).setTitle("Ajouter — Identité");
 
   const lastname = new TextInputBuilder()
     .setCustomId("lastname")
@@ -255,26 +258,32 @@ module.exports = {
     const userId = interaction.user.id;
 
     // --- ADD ---
-    if (interaction.customId === "jplan:add:start") {
+    if (interaction.customId.startsWith("jplan:add:start:")) {
+      const parts = interaction.customId.split(":");
+      const week = parts[3]; // YYYY-MM-DD
       clearDraft(guildId, userId);
-      return interaction.showModal(buildAddModalStep1());
+      return interaction.showModal(buildAddModalStep1(week));
     }
 
     if (interaction.customId.startsWith("jplan:add:step2:")) {
-      const ownerId = interaction.customId.split(":")[3];
+      // format: jplan:add:step2:<ownerId>:<weekMonday>
+      const parts = interaction.customId.split(":");
+      const ownerId = parts[3];
+      const week = parts[4];
       if (ownerId !== userId) {
         return interaction.reply({ content: "❌ Ce bouton ne t'est pas destiné.", ephemeral: true });
       }
       // modal date/heure
-      return interaction.showModal(buildDateModal("jplanmodal:add:step2", "Ajouter — Date/Heure"));
+      return interaction.showModal(buildDateModal(`jplanmodal:add:step2:${week}`, "Ajouter — Date/Heure"));
     }
 
     // --- EDIT ---
-    if (interaction.customId === "jplan:edit:start") {
+    if (interaction.customId.startsWith("jplan:edit:start:")) {
+      const week = interaction.customId.split(":")[3];
       const rec = await getPlanningMessage(guildId);
       if (!rec) return interaction.reply({ content: "❌ Aucun planning configuré. Lance /planning-jugements.", ephemeral: true });
 
-      const entries = await listEntriesForWeek(guildId, rec.week_monday);
+      const entries = await listEntriesForWeek(guildId, week);
       if (!entries.length) {
         return interaction.reply({ content: "❌ Rien à modifier cette semaine.", ephemeral: true });
       }
@@ -336,11 +345,12 @@ module.exports = {
     }
 
     // --- DELETE ---
-    if (interaction.customId === "jplan:del:start") {
+    if (interaction.customId.startsWith("jplan:del:start:")) {
+      const week = interaction.customId.split(":")[3];
       const rec = await getPlanningMessage(guildId);
       if (!rec) return interaction.reply({ content: "❌ Aucun planning configuré. Lance /planning-jugements.", ephemeral: true });
 
-      const entries = await listEntriesForWeek(guildId, rec.week_monday);
+      const entries = await listEntriesForWeek(guildId, week);
       if (!entries.length) {
         return interaction.reply({ content: "❌ Rien à supprimer cette semaine.", ephemeral: true });
       }

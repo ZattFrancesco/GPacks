@@ -52,11 +52,15 @@ function ticketMarkdown(url) {
   return `[Ticket](${u})`;
 }
 
-function buildComponents() {
+function buildComponents(weekMondayStr) {
+  // On encode la semaine affichée dans les boutons "Ajouter/Modifier/Supprimer"
+  // pour que les actions ciblent TOUJOURS la semaine visible, même après navigation.
+  const w = String(weekMondayStr || "").trim();
+
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId("jplan:add:start").setLabel("➕ Ajouter").setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId("jplan:edit:start").setLabel("✏️ Modifier").setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId("jplan:del:start").setLabel("🗑️ Supprimer").setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`jplan:add:start:${w}`).setLabel("➕ Ajouter").setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`jplan:edit:start:${w}`).setLabel("✏️ Modifier").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`jplan:del:start:${w}`).setLabel("🗑️ Supprimer").setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId("jplan:week:prev").setLabel("⬅️").setStyle(ButtonStyle.Primary),
     new ButtonBuilder().setCustomId("jplan:week:next").setLabel("➡️").setStyle(ButtonStyle.Primary)
   );
@@ -127,7 +131,7 @@ async function buildWeeklyPlanningMessage({ guildId, weekMondayDate }) {
 
   embed.setFooter({ text: "Planning DOJHelper — 1 entrée = 1 créneau" });
 
-  const components = buildComponents();
+  const components = buildComponents(safeWeek);
   return { embed, components };
 }
 
