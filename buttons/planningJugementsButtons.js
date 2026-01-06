@@ -50,23 +50,70 @@ function toLocalFromMysqlDatetime(mysqlDt) {
   return new Date(String(mysqlDt).replace(" ", "T"));
 }
 
-async function refresh(interaction, guildId) {
-  const rec = await getPlanningMessage(guildId);
-  if (!rec) return false;
+async function refreshPlanningMessage(interaction, guildId) {
+  // ✅ Objectif:
+  // - Mettre à jour LE message de planning (celui stocké en DB)
+  // - MAIS si on est déjà sur ce message, on l'édite directement (sans fetch)
+  // - Et surtout: ne jamais crash si le message/salon a été supprimé.
 
-  const ch = await interaction.guild.channels.fetch(String(rec.channel_id));
-  if (!ch || !ch.isTextBased?.()) return false;
-  const msg = await ch.messages.fetch(String(rec.message_id));
-  if (!msg) return false;
+  const rec = await getPlanningMessage(guildId);
+  if (!rec) {
+    try {
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.reply({ content: "Planning introuvable. Relance /planning-jugements pour recréer le message.", ephemeral: true });
+      } else {
+        await interaction.followUp({ content: "Planning introuvable. Relance /planning-jugements pour recréer le message.", ephemeral: true });
+      }
+    } catch (_) {}
+    return false;
+  }
 
   const safeWeek = rec.week_monday || toMysqlDate(getWeekMondayLocal());
-  // Si la DB a une ancienne valeur NULL, on la corrige.
   if (!rec.week_monday) {
     try { await setWeekMonday(guildId, safeWeek); } catch (_) {}
   }
+
   const { embed, components } = await buildWeeklyPlanningMessage({ guildId, weekMondayDate: safeWeek });
-  await msg.edit({ embeds: [embed], components });
-  return true;
+  const payload = { embeds: [embed], components };
+
+  // 1) Si l'interaction vient du message de planning, on édite DIRECTEMENT.
+  try {
+    const msg = interaction?.message;
+    if (msg && String(msg.id) === String(rec.message_id) && String(msg.channelId) === String(rec.channel_id)) {
+      await msg.edit(payload);
+      return true;
+    }
+  } catch (_) {
+    // On ignore et on tente la méthode DB.
+  }
+
+  // 2) Sinon (ex: suppression via message éphémère), on édite le message stocké en DB.
+  try {
+    const ch = await interaction.client.channels.fetch(String(rec.channel_id));
+    if (!ch || !ch.isTextBased?.()) throw new Error("Planning channel not text-based");
+    const planningMsg = await ch.messages.fetch(String(rec.message_id));
+    await planningMsg.edit(payload);
+    return true;
+  } catch (err) {
+    // 10003 = Unknown Channel, 10008 = Unknown Message
+    if (err?.code === 10003 || err?.code === 10008 || err?.status === 404) {
+      try {
+        if (!interaction.deferred && !interaction.replied) {
+          await interaction.reply({
+            content: "Le message du planning est introuvable (supprimé ou salon inaccessible). Relance /planning-jugements pour le recréer.",
+            ephemeral: true,
+          });
+        } else {
+          await interaction.followUp({
+            content: "Le message du planning est introuvable (supprimé ou salon inaccessible). Relance /planning-jugements pour le recréer.",
+            ephemeral: true,
+          });
+        }
+      } catch (_) {}
+      return false;
+    }
+    throw err;
+  }
 }
 
 function buildAddModalStep1() {
@@ -320,9 +367,15 @@ module.exports = {
       }
 
       await deleteEntry(guildId, idJudge);
-      await refresh(interaction, guildId);
 
-      return interaction.update({ content: "✅ Entrée supprimée + planning mis à jour.", components: [] });
+      // Ce bouton est sur un message éphémère (le menu de suppression),
+      // donc on confirme d'abord ici...
+      await interaction.update({ content: "✅ Entrée supprimée. Je mets à jour le planning…", components: [] });
+
+      // ...puis on met à jour LE message de planning (stocké en DB).
+      await refreshPlanningMessage(interaction, guildId);
+
+      return;
     }
 
     // --- WEEK NAV ---
@@ -337,7 +390,7 @@ module.exports = {
       const newWeek = toMysqlDate(base);
 
       await setWeekMonday(guildId, newWeek);
-      await refresh(interaction, guildId);
+      await refreshPlanningMessage(interaction, guildId);
 
       // pas de spam: on répond juste en ephemeral
       return interaction.reply({ content: `✅ Semaine affichée: ${toFR(monday)}`, ephemeral: true });

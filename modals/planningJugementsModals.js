@@ -31,6 +31,8 @@ async function refreshPlanningMessage(guild, guildId) {
   if (!rec) return false;
 
   try {
+    // On tente d'éditer le message stocké en DB.
+    // (modal submit = message éphémère, donc on ne peut pas se baser sur interaction.message)
     const ch = await guild.channels.fetch(String(rec.channel_id));
     if (!ch || !ch.isTextBased?.()) return false;
     const msg = await ch.messages.fetch(String(rec.message_id));
@@ -43,7 +45,9 @@ async function refreshPlanningMessage(guild, guildId) {
 
     await msg.edit({ embeds: [embed], components });
     return true;
-  } catch (_) {
+  } catch (err) {
+    // 10003 = Unknown Channel, 10008 = Unknown Message
+    if (err?.code === 10003 || err?.code === 10008 || err?.status === 404) return false;
     return false;
   }
 }
@@ -128,7 +132,13 @@ module.exports = {
 
       clearDraft(guildId, userId);
 
-      await refreshPlanningMessage(interaction.guild, guildId);
+      const ok = await refreshPlanningMessage(interaction.guild, guildId);
+      if (!ok) {
+        return interaction.reply({
+          content: "✅ Entrée ajoutée. ⚠️ Je n'ai pas réussi à mettre à jour l'embed du planning (message supprimé ou salon inaccessible). Relance /planning-jugements pour le recréer.",
+          ephemeral: true,
+        });
+      }
 
       return interaction.reply({ content: "✅ Entrée ajoutée + planning mis à jour.", ephemeral: true });
     }
@@ -194,7 +204,13 @@ module.exports = {
 
       clearDraft(guildId, userId);
 
-      await refreshPlanningMessage(interaction.guild, guildId);
+      const ok = await refreshPlanningMessage(interaction.guild, guildId);
+      if (!ok) {
+        return interaction.reply({
+          content: "✅ Entrée modifiée. ⚠️ Je n'ai pas réussi à mettre à jour l'embed du planning (message supprimé ou salon inaccessible). Relance /planning-jugements pour le recréer.",
+          ephemeral: true,
+        });
+      }
 
       return interaction.reply({ content: "✅ Entrée modifiée + planning mis à jour.", ephemeral: true });
     }
