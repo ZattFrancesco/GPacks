@@ -1,6 +1,15 @@
 // modals/planningInterneModals.js
 
-const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder, RoleSelectMenuBuilder } = require("discord.js");
+const {
+  ActionRowBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  UserSelectMenuBuilder,
+  RoleSelectMenuBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} = require("discord.js");
 
 const {
   ensureTables,
@@ -124,11 +133,23 @@ module.exports = {
         const firstname = String(safeVal(interaction, "firstname") || "").trim();
         if (!lastname || !firstname) return interaction.reply({ content: "❌ Nom / prénom manquant.", ephemeral: true });
 
-        // On stocke l'identité, puis on demande la date dans un 2e modal
+        // IMPORTANT: Discord n'autorise pas de chaîner un modal depuis un ModalSubmit.
+        // On stocke l'identité, puis on propose un bouton pour ouvrir le 2e modal (date/heure).
         setDraft(guildId, userId, { mode: "add", type: "APPOINTMENT", week, lastname, firstname });
 
-        const modal = buildAppointmentDateModal(week);
-        return interaction.showModal(modal);
+        const row = new ActionRowBuilder().addComponents(
+          // handled dans buttons/planningInterneButtons.js
+          new ButtonBuilder()
+            .setCustomId(`iplan:appt:date:${week}:${userId}`)
+            .setLabel("Continuer → Date & heure")
+            .setStyle(ButtonStyle.Primary)
+        );
+
+        return interaction.reply({
+          content: "✅ Nom enregistré. Clique pour renseigner la **date & l'heure** :",
+          components: [row],
+          ephemeral: true,
+        });
       }
 
       if (type === "APPOINTMENT_DATE") {
@@ -228,52 +249,29 @@ module.exports = {
         const reason = String(safeVal(interaction, "reason") || "").trim();
         if (!reason) return interaction.reply({ content: "❌ Raison vide.", ephemeral: true });
 
-        await insertEntry({
-          guildId,
-          weekMonday: week,
-          type: "OTHER",
-          eventDatetime: dt,
-          otherReason: reason,
-          createdByUserId: userId,
-        });
-
+        await updateEntry(guildId, idEntry, { eventDatetime: dt, otherReason: reason });
         await refreshPlanningMessage(interaction, guildId);
         clearDraft(guildId, userId);
-        return interaction.reply({ content: "✅ Ajouté.", ephemeral: true });
+        return interaction.reply({ content: "✅ Modifié.", ephemeral: true });
       }
 
-
-      if (type === "APPOINTMENT_NAME") {
+      if (type === "APPOINTMENT") {
+        // Édition en 2 étapes : modal (date/heure + nom/prénom) puis select users.
+        const dateStr = String(safeVal(interaction, "date") || "").trim();
+        const hourStr = String(safeVal(interaction, "hour") || "").trim();
         const lastname = String(safeVal(interaction, "lastname") || "").trim();
         const firstname = String(safeVal(interaction, "firstname") || "").trim();
         if (!lastname || !firstname) return interaction.reply({ content: "❌ Nom / prénom manquant.", ephemeral: true });
 
-        // On stocke l'identité, puis on demande la date dans un 2e modal
-        setDraft(guildId, userId, { mode: "add", type: "APPOINTMENT", week, lastname, firstname });
-
-        const modal = buildAppointmentDateModal(week);
-        return interaction.showModal(modal);
-      }
-
-      if (type === "APPOINTMENT_DATE") {
-        const draft = getDraft(guildId, userId);
-        if (!draft || draft.mode !== "add" || draft.type !== "APPOINTMENT") {
-          return interaction.reply({ content: "❌ Brouillon manquant. Recommence avec ➕ Ajouter.", ephemeral: true });
-        }
-
-        const year = safeVal(interaction, "year");
-        const month = safeVal(interaction, "month");
-        const day = safeVal(interaction, "day");
-        const hour = safeVal(interaction, "hour");
-
-        const dt = toMysqlDatetimeFromParts({ year, month, day, hour });
+        const p = parseDateFR(dateStr);
+        const dt = p ? toMysqlDatetimeFromParts({ year: p.year, month: p.month, day: p.day, hour: hourStr }) : null;
         if (!dt) return interaction.reply({ content: "❌ Date/heure invalide.", ephemeral: true });
 
-        setDraft(guildId, userId, { ...draft, eventDatetime: dt });
+        setDraft(guildId, userId, { mode: "edit", type: "APPOINTMENT", idEntry, eventDatetime: dt, lastname, firstname });
 
         const row = new ActionRowBuilder().addComponents(
           new UserSelectMenuBuilder()
-            .setCustomId(`iplanselect:add:appointment_users:${userId}`)
+            .setCustomId(`iplanselect:edit:appointment_users:${userId}`)
             .setPlaceholder("Sélectionne les personnes concernées…")
             .setMinValues(0)
             .setMaxValues(25)

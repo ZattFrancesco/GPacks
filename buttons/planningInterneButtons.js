@@ -116,6 +116,24 @@ function buildTypeSelect(userId, week) {
   return row;
 }
 
+function buildAppointmentDateModal(week) {
+  const modal = new ModalBuilder().setCustomId(`iplanmodal:add:APPOINTMENT_DATE:${week}`).setTitle("Rendez-vous — Date & heure");
+
+  const year = new TextInputBuilder().setCustomId("year").setLabel("Année").setStyle(TextInputStyle.Short).setRequired(true);
+  const month = new TextInputBuilder().setCustomId("month").setLabel("Mois (1-12)").setStyle(TextInputStyle.Short).setRequired(true);
+  const day = new TextInputBuilder().setCustomId("day").setLabel("Jour (1-31)").setStyle(TextInputStyle.Short).setRequired(true);
+  const hour = new TextInputBuilder().setCustomId("hour").setLabel("Heure (0-23)").setStyle(TextInputStyle.Short).setRequired(true);
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(year),
+    new ActionRowBuilder().addComponents(month),
+    new ActionRowBuilder().addComponents(day),
+    new ActionRowBuilder().addComponents(hour)
+  );
+
+  return modal;
+}
+
 function buildEditOpenModal(entry) {
   const type = String(entry.type || "").toUpperCase();
   if (type === "TRAINING") {
@@ -228,6 +246,17 @@ function buildEditOpenModal(entry) {
     .setCustomId(`iplanmodal:edit:OTHER:${entry.id_entry}`)
     .setTitle("Modifier — Autre");
 
+  const dt = toLocalFromMysqlDatetime(entry.event_datetime);
+  const y = dt ? String(dt.getFullYear()) : "";
+  const m = dt ? String(dt.getMonth() + 1) : "";
+  const d = dt ? String(dt.getDate()) : "";
+  const h = dt ? String(dt.getHours()) : "";
+
+  const year = new TextInputBuilder().setCustomId("year").setLabel("Année").setStyle(TextInputStyle.Short).setRequired(true).setValue(y);
+  const month = new TextInputBuilder().setCustomId("month").setLabel("Mois (1-12)").setStyle(TextInputStyle.Short).setRequired(true).setValue(m);
+  const day = new TextInputBuilder().setCustomId("day").setLabel("Jour (1-31)").setStyle(TextInputStyle.Short).setRequired(true).setValue(d);
+  const hour = new TextInputBuilder().setCustomId("hour").setLabel("Heure (0-23)").setStyle(TextInputStyle.Short).setRequired(true).setValue(h);
+
   const reason = new TextInputBuilder()
     .setCustomId("reason")
     .setLabel("Raison")
@@ -235,7 +264,13 @@ function buildEditOpenModal(entry) {
     .setRequired(true)
     .setValue(String(entry.other_reason || ""));
 
-  modal.addComponents(new ActionRowBuilder().addComponents(reason));
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(year),
+    new ActionRowBuilder().addComponents(month),
+    new ActionRowBuilder().addComponents(day),
+    new ActionRowBuilder().addComponents(hour),
+    new ActionRowBuilder().addComponents(reason)
+  );
   return modal;
 }
 
@@ -247,6 +282,15 @@ module.exports = {
 
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
+
+    // --- RENDEZ-VOUS: étape 2 (ouvrir le modal date/heure) ---
+    if (interaction.customId.startsWith("iplan:appt:date:")) {
+      const parts = interaction.customId.split(":");
+      const week = parts[3];
+      const owner = parts[4];
+      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", ephemeral: true });
+      return interaction.showModal(buildAppointmentDateModal(week));
+    }
 
     // --- NAVIGATION ---
     if (interaction.customId.startsWith("iplan:nav:")) {
