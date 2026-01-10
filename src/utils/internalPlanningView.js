@@ -106,7 +106,14 @@ function buildComponents(weekMondayStr) {
 }
 
 async function buildWeeklyPlanningMessage({ guildId, weekMondayDate }) {
-  const safeWeek = String(weekMondayDate || "").trim() || toMysqlDate(getWeekMondayLocal(new Date()));
+    let safeWeek;
+  if (weekMondayDate instanceof Date) {
+    // mysql2 peut renvoyer les DATE en objet Date -> on le re-formate en YYYY-MM-DD
+    safeWeek = toMysqlDate(weekMondayDate);
+  } else {
+    const t = String(weekMondayDate || "").trim();
+    safeWeek = /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : toMysqlDate(getWeekMondayLocal(new Date()));
+  }
   const monday = toLocalDateFromMysqlDate(safeWeek);
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
