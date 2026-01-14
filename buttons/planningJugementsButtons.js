@@ -144,7 +144,7 @@ function buildAddModalStep1(weekMondayStr) {
 
   const accusedId = new TextInputBuilder()
     .setCustomId("accused_id")
-    .setLabel("ID accusé (Optionnel)")
+    .setLabel("ID accusé (Merci de le rajouter via la modif svp)")
     .setStyle(TextInputStyle.Short)
     .setRequired(false);
 

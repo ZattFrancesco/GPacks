@@ -26,6 +26,10 @@ function buildPanelEmbed(panel) {
   if (c !== null) e.setColor(c);
   if (panel.logo_url) e.setThumbnail(panel.logo_url);
   if (panel.banner_url) e.setImage(panel.banner_url);
+  // Affiche l'ID du panel en footer (utile pour l'admin + debug)
+  if (panel?.id) {
+    e.setFooter({ text: `Panel ID: ${panel.id}` });
+  }
   return e;
 }
 

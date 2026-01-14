@@ -28,6 +28,13 @@ function isStaff(member, staffRoleIds) {
   return member.roles?.cache?.some((r) => set.has(r.id)) || false;
 }
 
+function buildStaffRoleMentions(staffRoleIds) {
+  const ids = (staffRoleIds || []).filter(Boolean);
+  if (!ids.length) return "";
+  // Mentions Discord: <@&roleId>
+  return ids.map((id) => `<@&${id}>`).join(" ");
+}
+
 async function refreshControlMessage(channel, client, ticket, type, panel) {
   try {
     let botMsg = null;
@@ -155,21 +162,51 @@ module.exports = {
         return interaction.reply({ content: "ℹ️ Déjà fermé.", ephemeral: true });
       }
 
+      // Anti-spam : si une confirmation est déjà en attente, on évite d'en envoyer une nouvelle.
+      if (ticket.pending_close_message_id) {
+        try {
+          await channel.messages.fetch(String(ticket.pending_close_message_id));
+          return interaction.reply({
+            content: "ℹ️ Une demande de confirmation est déjà en attente dans ce ticket.",
+            ephemeral: true,
+          });
+        } catch {
+          // Le message n'existe plus -> on nettoie et on continue.
+          try {
+            await clearPendingCloseMessage(guildId, ticket.ticket_id);
+          } catch {}
+        }
+      }
+
+      const staffMentions = buildStaffRoleMentions(staffRoleIds);
+
+      const embed = {
+        title: "🔒 Confirmation de fermeture",
+        description: `<@${ticket.author_user_id}>, <@${interaction.user.id}> souhaiterait clôturer ce ticket.\nMerci de confirmer la fermeture ci-dessous.`,
+      };
+
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`ticket:closeconfirm:${ticket.ticket_id}`)
-          .setLabel("Confirmer")
+          .setLabel("Confirmer (fermer)")
           .setStyle(ButtonStyle.Danger),
         new ButtonBuilder()
           .setCustomId(`ticket:closecancel:${ticket.ticket_id}`)
-          .setLabel("Annuler")
+          .setLabel("Garder le ticket ouvert")
           .setStyle(ButtonStyle.Secondary)
       );
 
-      await channel.send({
-        content: `<@${ticket.author_user_id}> le staff veut fermer ce ticket. Tu confirmes ?`,
+      const msg = await channel.send({
+        // ✅ On ping le créateur + les rôles staff (notification), mais le texte ne ping que créateur + staff qui ferme.
+        content: `${`<@${ticket.author_user_id}>`}${staffMentions ? ` ${staffMentions}` : ""}`,
+        embeds: [embed],
         components: [row],
       });
+
+      // Stocke l'ID du message de confirmation (anti-spam)
+      try {
+        await setPendingCloseMessage(guildId, ticket.ticket_id, msg.id);
+      } catch {}
 
       return interaction.reply({ content: "✅ Demande de confirmation envoyée au créateur.", ephemeral: true });
     }
@@ -199,11 +236,17 @@ module.exports = {
       if (interaction.user.id !== ticket.author_user_id) {
         return interaction.reply({ content: "❌ Seul le créateur peut annuler.", ephemeral: true });
       }
+
+      // On supprime le message de confirmation si on garde le ticket ouvert
       try {
-        await interaction.message.edit({ components: [] });
-      } catch {}
+        await interaction.message.delete();
+      } catch {
+        try {
+          await interaction.message.edit({ components: [] });
+        } catch {}
+      }
       try { await clearPendingCloseMessage(guildId, ticket.ticket_id); } catch {}
-      return interaction.reply({ content: "✅ Fermeture annulée.", ephemeral: true });
+      return interaction.reply({ content: "✅ Ticket gardé ouvert.", ephemeral: true });
     }
 
     // ---------------- REOPEN ----------------

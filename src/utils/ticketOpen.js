@@ -142,19 +142,7 @@ const categoryId = type.category_opened_id || null;
     prenom,
   });
 
-  // Custom embed (informatif)
-  if (type.custom_embed_enabled && (type.custom_embed_title || type.custom_embed_description)) {
-    await channel.send({
-      embeds: [
-        {
-          title: type.custom_embed_title || undefined,
-          description: type.custom_embed_description || undefined,
-        },
-      ],
-    });
-  }
-
-  // Embed de contrôle + boutons
+  // Embed de contrôle + boutons (envoyé en premier)
   const controlMsg = await channel.send({
     content: `<@${author.id}>`,
     embeds: [
@@ -179,6 +167,18 @@ const categoryId = type.category_opened_id || null;
   try {
     await setTicketControlMessageId(guildId, ticketId, controlMsg.id);
   } catch {}
+
+  // Custom embed (informatif) — envoyé après l'embed de contrôle
+  if (type.custom_embed_enabled && (type.custom_embed_title || type.custom_embed_description)) {
+    await channel.send({
+      embeds: [
+        {
+          title: type.custom_embed_title || undefined,
+          description: type.custom_embed_description || undefined,
+        },
+      ],
+    });
+  }
 
 
   // Réponse propre au user
