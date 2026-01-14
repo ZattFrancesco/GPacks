@@ -4,7 +4,11 @@ module.exports = async (client, interaction) => {
   let btn = client.buttons?.get(interaction.customId);
 
   if (!btn && Array.isArray(client.buttonsPrefix)) {
-    btn = client.buttonsPrefix.find((b) => interaction.customId.startsWith(b.idPrefix));
+    // Prefer the most specific prefix (longest idPrefix) to avoid collisions.
+    const matches = client.buttonsPrefix
+      .filter((b) => interaction.customId.startsWith(b.idPrefix))
+      .sort((a, b) => (b.idPrefix?.length || 0) - (a.idPrefix?.length || 0));
+    btn = matches[0];
   }
   if (!btn) return;
 

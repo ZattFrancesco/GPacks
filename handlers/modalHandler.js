@@ -4,7 +4,11 @@ module.exports = async (client, interaction) => {
   let modal = client.modals?.get(interaction.customId);
 
   if (!modal && Array.isArray(client.modalsPrefix)) {
-    modal = client.modalsPrefix.find((m) => interaction.customId.startsWith(m.idPrefix));
+    // Prefer the most specific prefix (longest idPrefix) to avoid collisions.
+    const matches = client.modalsPrefix
+      .filter((m) => interaction.customId.startsWith(m.idPrefix))
+      .sort((a, b) => (b.idPrefix?.length || 0) - (a.idPrefix?.length || 0));
+    modal = matches[0];
   }
   if (!modal) return;
 
