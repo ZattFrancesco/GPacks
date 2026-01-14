@@ -7,18 +7,24 @@ module.exports = {
     .setName("ticket-type-create")
     .setDescription("Créer / mettre à jour un type de ticket")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+
+    // ✅ REQUIRED D'ABORD (obligatoires en premier)
     .addStringOption((o) => o.setName("id").setDescription("ID unique (ex: plainte)").setRequired(true))
     .addStringOption((o) => o.setName("label").setDescription("Label visible").setRequired(true))
-    .addStringOption((o) => o.setName("emoji").setDescription("Emoji (optionnel)").setRequired(false))
-    .addBooleanOption((o) => o.setName("namemodalrename").setDescription("Demander Nom/Prénom + changer pseudo").setRequired(false))
     .addChannelOption((o) =>
       o
         .setName("categoryopened")
         .setDescription("Catégorie où créer les tickets")
         .addChannelTypes(4) // GuildCategory
-        .setRequired(false)
+        .setRequired(true)
     )
     .addRoleOption((o) => o.setName("staffrole1").setDescription("Rôle staff 1").setRequired(true))
+
+    // ✅ ENSUITE les optionnels
+    .addStringOption((o) => o.setName("emoji").setDescription("Emoji (optionnel)").setRequired(false))
+    .addBooleanOption((o) =>
+      o.setName("namemodalrename").setDescription("Demander Nom/Prénom + changer pseudo").setRequired(false)
+    )
     .addRoleOption((o) => o.setName("staffrole2").setDescription("Rôle staff 2").setRequired(false))
     .addRoleOption((o) => o.setName("staffrole3").setDescription("Rôle staff 3").setRequired(false))
     .addRoleOption((o) => o.setName("staffrole4").setDescription("Rôle staff 4").setRequired(false))
@@ -30,9 +36,10 @@ module.exports = {
 
     const id = interaction.options.getString("id", true);
     const label = interaction.options.getString("label", true);
+    const category = interaction.options.getChannel("categoryopened", true);
+
     const emoji = interaction.options.getString("emoji", false) || null;
     const nameModalRename = interaction.options.getBoolean("namemodalrename") || false;
-    const category = interaction.options.getChannel("categoryopened", false);
     const customEmbed = interaction.options.getBoolean("customembed") || false;
 
     const staffRoleIds = [];
@@ -41,6 +48,7 @@ module.exports = {
       if (r) staffRoleIds.push(r.id);
     }
 
+    // staffrole1 est required, donc on l’a forcément, mais on garde la sécurité
     if (!staffRoleIds.length) {
       return interaction.reply({ content: "❌ Tu dois mettre au moins 1 rôle staff.", ephemeral: true });
     }
@@ -52,10 +60,11 @@ module.exports = {
         label,
         emoji,
         nameModalRename,
-        categoryOpenedId: category?.id || null,
+        categoryOpenedId: category.id,
         staffRoleIds,
         customEmbedEnabled: true,
       });
+
       const modal = require("../../modals/ticketTypeCustomEmbed.modal");
       return interaction.showModal(modal.build());
     }
@@ -65,7 +74,7 @@ module.exports = {
       label,
       emoji,
       nameModalRename,
-      categoryOpenedId: category?.id || null,
+      categoryOpenedId: category.id,
       staffRoleIds,
       customEmbedEnabled: false,
     });
