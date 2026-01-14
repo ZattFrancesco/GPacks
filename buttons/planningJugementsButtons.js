@@ -146,7 +146,7 @@ function buildAddModalStep1(weekMondayStr) {
     .setCustomId("accused_id")
     .setLabel("ID accusé")
     .setStyle(TextInputStyle.Short)
-    .setRequired();
+    .setRequired(false);
 
   const ticket = new TextInputBuilder()
     .setCustomId("ticket_url")

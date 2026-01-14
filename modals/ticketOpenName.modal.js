@@ -11,13 +11,13 @@ module.exports = {
     const modal = new ModalBuilder().setCustomId("ticketopen:name").setTitle("Ticket - Nom / Prénom");
     const prenom = new TextInputBuilder()
       .setCustomId("prenom")
-      .setLabel("Prénom")
+      .setLabel("Prénom (RP)")
       .setRequired(true)
       .setStyle(TextInputStyle.Short)
       .setMaxLength(64);
     const nom = new TextInputBuilder()
       .setCustomId("nom")
-      .setLabel("Nom")
+      .setLabel("Nom (RP)")
       .setRequired(true)
       .setStyle(TextInputStyle.Short)
       .setMaxLength(64);
