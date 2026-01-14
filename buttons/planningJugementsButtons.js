@@ -144,15 +144,15 @@ function buildAddModalStep1(weekMondayStr) {
 
   const accusedId = new TextInputBuilder()
     .setCustomId("accused_id")
-    .setLabel("ID accusé")
+    .setLabel("ID accusé (Optionnel)")
     .setStyle(TextInputStyle.Short)
     .setRequired(false);
 
   const ticket = new TextInputBuilder()
     .setCustomId("ticket_url")
-    .setLabel("Lien ticket Discord (https://...)(Optionnel)")
+    .setLabel("Lien ticket Discord (https://...)")
     .setStyle(TextInputStyle.Short)
-    .setRequired(false);
+    .setRequired(true);
 
   modal.addComponents(
     new ActionRowBuilder().addComponents(lastname),
