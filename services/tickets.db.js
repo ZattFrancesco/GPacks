@@ -106,6 +106,21 @@ async function ensureTables() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
 
+
+  // Migrations légères (ajouts de colonnes sans casser si déjà existantes)
+  const alters = [
+    "ALTER TABLE doj_tickets ADD COLUMN control_message_id VARCHAR(32) NULL",
+    "ALTER TABLE doj_tickets ADD COLUMN pending_close_message_id VARCHAR(32) NULL",
+    "ALTER TABLE doj_tickets ADD COLUMN pending_close_at TIMESTAMP NULL",
+  ];
+  for (const sql of alters) {
+    try {
+      await query(sql);
+    } catch {
+      // ignore (colonne déjà existante, etc.)
+    }
+  }
+
   ensured = true;
 }
 
@@ -372,6 +387,31 @@ async function setTicketStatus(guildId, ticketId, status) {
   );
 }
 
+
+async function setTicketControlMessageId(guildId, ticketId, messageId) {
+  await ensureTables();
+  await query(
+    "UPDATE doj_tickets SET control_message_id = ? WHERE guild_id = ? AND ticket_id = ?",
+    [messageId ? String(messageId) : null, String(guildId), String(ticketId)]
+  );
+}
+
+async function setPendingCloseMessage(guildId, ticketId, messageId) {
+  await ensureTables();
+  await query(
+    "UPDATE doj_tickets SET pending_close_message_id = ?, pending_close_at = ? WHERE guild_id = ? AND ticket_id = ?",
+    [messageId ? String(messageId) : null, messageId ? new Date() : null, String(guildId), String(ticketId)]
+  );
+}
+
+async function clearPendingCloseMessage(guildId, ticketId) {
+  await ensureTables();
+  await query(
+    "UPDATE doj_tickets SET pending_close_message_id = NULL, pending_close_at = NULL WHERE guild_id = ? AND ticket_id = ?",
+    [String(guildId), String(ticketId)]
+  );
+}
+
 module.exports = {
   ensureTables,
   normalizeId,
@@ -395,4 +435,7 @@ module.exports = {
   getTicketByChannel,
   getTicketById,
   setTicketStatus,
+  setTicketControlMessageId,
+  setPendingCloseMessage,
+  clearPendingCloseMessage,
 };

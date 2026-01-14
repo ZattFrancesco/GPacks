@@ -66,22 +66,61 @@ function buildPanelComponents({ panel, types }) {
   return [new ActionRowBuilder().addComponents(menu)];
 }
 
+function toUnixSeconds(d) {
+  try {
+    const dt = d instanceof Date ? d : new Date(d);
+    const ms = dt.getTime();
+    if (!Number.isFinite(ms)) return null;
+    return Math.floor(ms / 1000);
+  } catch {
+    return null;
+  }
+}
+
+function statusMeta(status) {
+  const st = String(status || "open").toLowerCase();
+  if (st === "closed") return { label: "Fermé", emoji: "🔒", color: 0xf39c12 };
+  if (st === "deleted") return { label: "Supprimé", emoji: "🗑️", color: 0xe74c3c };
+  return { label: "Ouvert", emoji: "🟢", color: 0x2ecc71 };
+}
+
 function buildTicketControlEmbed({ ticket, type, panel, channel }) {
+  const meta = statusMeta(ticket.status);
+
+  const typeName = `${type?.emoji ? `${type.emoji} ` : ""}${type?.label || type?.id || ticket.type_id}`;
+  const fullName = `${String(ticket.prenom || "").trim()} ${String(ticket.nom || "").trim()}`.trim();
+
+  const openedTs = toUnixSeconds(ticket.opened_at || new Date());
+
   const e = new EmbedBuilder()
-    .setTitle(`🎫 Ticket #${ticket.ticket_id}`)
-    .setDescription(
-      [
-        `**Type :** ${type?.label || type?.id || ticket.type_id}`,
-        `**Panel :** ${panel?.id || ticket.panel_id}`,
-        `**Créateur :** <@${ticket.author_user_id}>`,
-        ticket.nom || ticket.prenom ? `**Nom :** ${(ticket.prenom || "").trim()} ${(ticket.nom || "").trim()}`.trim() : null,
-        `**Statut :** ${ticket.status}`,
-        channel ? `**Salon :** <#${channel.id}>` : null,
-      ]
-        .filter(Boolean)
-        .join("\n")
-    )
-    .setTimestamp(new Date(ticket.opened_at || Date.now()));
+    .setTitle(`🎫 Ticket #${ticket.ticket_id} — ${typeName}`.slice(0, 256))
+    .setColor(meta.color);
+
+  e.addFields(
+    { name: "👤 Créateur", value: `<@${ticket.author_user_id}>`, inline: true },
+    { name: "📌 Statut", value: `${meta.emoji} **${meta.label}**`, inline: true },
+    { name: "🗂️ Panel", value: `\`${panel?.id || ticket.panel_id}\``, inline: true },
+  );
+
+  if (fullName) {
+    e.addFields({ name: "🧾 Identité", value: `\`${fullName}\``, inline: true });
+  }
+
+  e.addFields({
+    name: "🕒 Ouvert le",
+    value: openedTs ? `<t:${openedTs}:F>
+(<t:${openedTs}:R>)` : "—",
+    inline: true,
+  });
+
+  if (channel?.id) {
+    e.addFields({ name: "💬 Salon", value: `<#${channel.id}>`, inline: true });
+  }
+
+  e.setFooter({
+    text: `Type: ${type?.id || ticket.type_id} • Ticket ID: ${ticket.ticket_id}`,
+  });
+
   return e;
 }
 
@@ -91,11 +130,11 @@ function buildTicketOpenRows(ticketId, { isClosed }) {
       new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`ticket:reopen:${ticketId}`)
-          .setLabel("Re-open")
+          .setLabel("🔓 Ré-ouvrir")
           .setStyle(ButtonStyle.Success),
         new ButtonBuilder()
           .setCustomId(`ticket:delete:${ticketId}`)
-          .setLabel("Delete")
+          .setLabel("🗑️ Supprimer")
           .setStyle(ButtonStyle.Danger)
       ),
     ];
@@ -105,15 +144,15 @@ function buildTicketOpenRows(ticketId, { isClosed }) {
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`ticket:close:${ticketId}`)
-        .setLabel("Fermer")
-        .setStyle(ButtonStyle.Secondary),
+        .setLabel("🔒 Fermer")
+        .setStyle(ButtonStyle.Danger),
       new ButtonBuilder()
         .setCustomId(`ticket:rename:${ticketId}`)
-        .setLabel("Rename")
-        .setStyle(ButtonStyle.Primary),
+        .setLabel("✏️ Renommer")
+        .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId(`ticket:members:${ticketId}`)
-        .setLabel("Add / Remove")
+        .setLabel("👥 Membres")
         .setStyle(ButtonStyle.Secondary)
     ),
   ];

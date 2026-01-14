@@ -4,15 +4,30 @@ const { buildTicketControlEmbed, buildTicketOpenRows } = require("../src/utils/t
 
 async function refreshControl(channel, client, ticket, type, panel) {
   try {
-    const msgs = await channel.messages.fetch({ limit: 15 });
-    const botMsg = [...msgs.values()].find((m) => m.author?.id === client.user.id && m.embeds?.length);
+    let botMsg = null;
+
+    if (ticket.control_message_id) {
+      try {
+        botMsg = await channel.messages.fetch(String(ticket.control_message_id));
+      } catch {
+        botMsg = null;
+      }
+    }
+
+    if (!botMsg) {
+      const msgs = await channel.messages.fetch({ limit: 25 });
+      botMsg = [...msgs.values()].find((m) => m.author?.id === client.user.id && m.embeds?.length);
+    }
+
     if (!botMsg) return;
+
     await botMsg.edit({
       embeds: [buildTicketControlEmbed({ ticket, type, panel, channel })],
       components: buildTicketOpenRows(ticket.ticket_id, { isClosed: ticket.status === "closed" }),
     });
   } catch {}
 }
+
 
 const renameModal = {
   idPrefix: "ticket:renameModal:",

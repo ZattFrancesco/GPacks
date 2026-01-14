@@ -9,9 +9,10 @@ const {
   ButtonStyle,
 } = require("discord.js");
 
-const { getPanel, getType, createTicket } = require("../../services/tickets.db");
+const { getPanel, getType, createTicket, setTicketControlMessageId } = require("../../services/tickets.db");
 const { buildTicketControlEmbed, buildTicketOpenRows } = require("./ticketViews");
 const { setOpenDraft } = require("./ticketDrafts");
+const { isBlacklisted } = require("../../services/blacklist.db");
 
 function sanitizeChannelPart(s) {
   return String(s || "")
@@ -44,7 +45,14 @@ async function openTicketFromPanel(interaction, { panelId, typeId }) {
     return interaction.reply({ content: "❌ Tu n'as pas le rôle requis pour ouvrir un ticket.", ephemeral: true });
   }
 
-  // Type autorisé
+    // Blacklist
+  const bl = await isBlacklisted(interaction.user.id);
+  if (bl?.blacklisted) {
+    const reason = bl.reason ? `\nRaison: **${bl.reason}**` : "";
+    return interaction.reply({ content: `❌ Tu es blacklisté, tu ne peux pas ouvrir de ticket.${reason}`, ephemeral: true });
+  }
+
+// Type autorisé
   const typeIds = panel.type_ids || JSON.parse(panel.type_ids_json || "[]");
   if (!typeIds.includes(typeId)) {
     return interaction.reply({ content: "❌ Ce type n'est pas autorisé sur ce panel.", ephemeral: true });
@@ -70,7 +78,7 @@ async function createTicketChannelAndMessages(interaction, { panel, type, nom, p
   const guildId = interaction.guildId;
   const author = interaction.user;
 
-  const labelPart = sanitizeChannelPart(type.id);
+  const labelPart = sanitizeChannelPart(type.label || type.id);
   const namePart = sanitizeChannelPart(suffix || `${prenom || ""}-${nom || ""}`);
   let channelName = `${labelPart}-${namePart}`.replace(/-+/g, "-").slice(0, 90);
   if (!channelName) channelName = `ticket-${author.id}`;
@@ -84,21 +92,37 @@ async function createTicketChannelAndMessages(interaction, { panel, type, nom, p
     },
     {
       id: author.id,
-      allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+      ],
     },
     {
       id: interaction.client.user.id,
-      allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ReadMessageHistory],
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.ManageChannels,
+        PermissionFlagsBits.ManageMessages,
+      ],
     },
   ];
+
+  // Staff : accès au ticket, mais pas de ManageChannels (tout passe via les boutons)
   for (const rid of staffRoleIds) {
     overwrites.push({
       id: rid,
-      allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageChannels],
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+      ],
     });
   }
 
-  const categoryId = type.category_opened_id || null;
+const categoryId = type.category_opened_id || null;
 
   const channel = await guild.channels.create({
     name: channelName,
@@ -131,7 +155,7 @@ async function createTicketChannelAndMessages(interaction, { panel, type, nom, p
   }
 
   // Embed de contrôle + boutons
-  await channel.send({
+  const controlMsg = await channel.send({
     content: `<@${author.id}>`,
     embeds: [
       buildTicketControlEmbed({
@@ -152,6 +176,10 @@ async function createTicketChannelAndMessages(interaction, { panel, type, nom, p
     ],
     components: buildTicketOpenRows(ticketId, { isClosed: false }),
   });
+  try {
+    await setTicketControlMessageId(guildId, ticketId, controlMsg.id);
+  } catch {}
+
 
   // Réponse propre au user
   if (interaction.deferred || interaction.replied) {

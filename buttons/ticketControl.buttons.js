@@ -12,6 +12,8 @@ const {
 const {
   getTicketById,
   setTicketStatus,
+  setPendingCloseMessage,
+  clearPendingCloseMessage,
   getType,
   getPanel,
 } = require("../services/tickets.db");
@@ -28,17 +30,32 @@ function isStaff(member, staffRoleIds) {
 
 async function refreshControlMessage(channel, client, ticket, type, panel) {
   try {
-    const msgs = await channel.messages.fetch({ limit: 15 });
-    const botMsg = [...msgs.values()].find(
-      (m) => m.author?.id === client.user.id && m.embeds?.length
-    );
+    let botMsg = null;
+
+    // ✅ On privilégie l'ID stocké en DB (fiable)
+    if (ticket.control_message_id) {
+      try {
+        botMsg = await channel.messages.fetch(String(ticket.control_message_id));
+      } catch {
+        botMsg = null;
+      }
+    }
+
+    // Fallback : cherche dans les derniers messages
+    if (!botMsg) {
+      const msgs = await channel.messages.fetch({ limit: 25 });
+      botMsg = [...msgs.values()].find((m) => m.author?.id === client.user.id && m.embeds?.length);
+    }
+
     if (!botMsg) return;
+
     await botMsg.edit({
       embeds: [buildTicketControlEmbed({ ticket, type, panel, channel })],
       components: buildTicketOpenRows(ticket.ticket_id, { isClosed: ticket.status === "closed" }),
     });
   } catch {}
 }
+
 
 module.exports = {
   idPrefix: "ticket:",
@@ -54,7 +71,57 @@ module.exports = {
     // Actions qui n'ont pas de ticketId (rare)
     if (!action) return;
 
-    // --- Helper charge ticket ---
+    // ---------------------------------------------------------------------
+    // Cas spécial: gestion membres -> ticket:member:add:<ticketId>:<userId>
+    // Ici, parts[2] = subAction, parts[3] = ticketId.
+    // ---------------------------------------------------------------------
+    if (action === "member") {
+      const subAction = parts[2];
+      const realTicketId = parts[3];
+      const targetUserId = parts[4];
+
+      if (!subAction || !realTicketId || !targetUserId) {
+        return interaction.reply({ content: "❌ Action membre invalide.", ephemeral: true });
+      }
+
+      const ticket = await getTicketById(guildId, realTicketId);
+      if (!ticket) {
+        return interaction.reply({ content: "❌ Ticket introuvable (DB).", ephemeral: true });
+      }
+
+      const type = await getType(guildId, ticket.type_id);
+      const panel = await getPanel(guildId, ticket.panel_id);
+      const staffRoleIds = type?.staff_role_ids || JSON.parse(type?.staff_role_ids_json || "[]");
+
+      if (!isStaff(interaction.member, staffRoleIds)) {
+        return interaction.reply({ content: "❌ Réservé au staff.", ephemeral: true });
+      }
+
+      try {
+        if (subAction === "add") {
+          await channel.permissionOverwrites.edit(targetUserId, {
+            ViewChannel: true,
+            SendMessages: true,
+            ReadMessageHistory: true,
+          });
+          return interaction.reply({ content: `✅ <@${targetUserId}> ajouté au ticket.`, ephemeral: true });
+        }
+
+        if (subAction === "remove") {
+          // On retire la visibilité : le user ne voit plus le salon
+          await channel.permissionOverwrites.edit(targetUserId, {
+            ViewChannel: false,
+          });
+          return interaction.reply({ content: `✅ <@${targetUserId}> retiré du ticket.`, ephemeral: true });
+        }
+
+        return interaction.reply({ content: "❌ Sous-action inconnue.", ephemeral: true });
+      } catch {
+        return interaction.reply({ content: "❌ Impossible de modifier les permissions (vérifie les perms du bot).", ephemeral: true });
+      }
+    }
+
+    // --- Helper charge ticket (cas standard: ticket:<action>:<ticketId>) ---
     const ticket = ticketId ? await getTicketById(guildId, ticketId) : null;
     if (ticketId && !ticket) {
       return interaction.reply({ content: "❌ Ticket introuvable (DB).", ephemeral: true });
@@ -117,6 +184,7 @@ module.exports = {
       } catch {}
 
       await setTicketStatus(guildId, ticket.ticket_id, "closed");
+      try { await clearPendingCloseMessage(guildId, ticket.ticket_id); } catch {}
       const updated = { ...ticket, status: "closed" };
       await refreshControlMessage(channel, client, updated, type, panel);
 
@@ -134,6 +202,7 @@ module.exports = {
       try {
         await interaction.message.edit({ components: [] });
       } catch {}
+      try { await clearPendingCloseMessage(guildId, ticket.ticket_id); } catch {}
       return interaction.reply({ content: "✅ Fermeture annulée.", ephemeral: true });
     }
 
@@ -157,7 +226,7 @@ module.exports = {
     // ---------------- RENAME ----------------
     if (action === "rename") {
       const modal = new ModalBuilder()
-        .setCustomId(`ticket:renamemodal:${ticket.ticket_id}`)
+        .setCustomId(`ticket:renameModal:${ticket.ticket_id}`)
         .setTitle("Renommer le ticket");
 
       const input = new TextInputBuilder()
@@ -211,11 +280,11 @@ module.exports = {
     if (action === "delete_mp") {
       // Modal message
       const modal = new ModalBuilder()
-        .setCustomId(`ticket:deletemodal:${ticket.ticket_id}`)
+        .setCustomId(`ticket:deleteDmModal:${ticket.ticket_id}`)
         .setTitle("Message au créateur (optionnel)");
 
       const input = new TextInputBuilder()
-        .setCustomId("msg")
+        .setCustomId("message")
         .setLabel("Message")
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(false)

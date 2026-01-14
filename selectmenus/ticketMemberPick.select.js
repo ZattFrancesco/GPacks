@@ -14,11 +14,11 @@ module.exports = {
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`ticket:member:add:${ticketId}:${userId}`)
-        .setLabel("Ajouter")
+        .setLabel("✅ Ajouter")
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
         .setCustomId(`ticket:member:remove:${ticketId}:${userId}`)
-        .setLabel("Retirer")
+        .setLabel("❌ Retirer")
         .setStyle(ButtonStyle.Danger)
     );
 
