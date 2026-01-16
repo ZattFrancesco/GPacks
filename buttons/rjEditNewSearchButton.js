@@ -35,7 +35,7 @@ module.exports = {
 
     const query = new TextInputBuilder()
       .setCustomId("query")
-      .setLabel("Nom / Prénom (comme /rapport-alltime)")
+      .setLabel("Nom / Prénom")
       .setStyle(TextInputStyle.Short)
       .setPlaceholder("ex: vazimov ou ibrahim vazimov")
       .setRequired(true)
