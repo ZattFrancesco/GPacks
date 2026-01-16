@@ -130,18 +130,9 @@ function buildTicketControlEmbed({ ticket, type, panel, channel }) {
 
 function buildTicketOpenRows(ticketId, { isClosed }) {
   if (isClosed) {
-    return [
-      new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`ticket:reopen:${ticketId}`)
-          .setLabel("🔓 Ré-ouvrir")
-          .setStyle(ButtonStyle.Success),
-        new ButtonBuilder()
-          .setCustomId(`ticket:delete:${ticketId}`)
-          .setLabel("🗑️ Supprimer")
-          .setStyle(ButtonStyle.Danger)
-      ),
-    ];
+    // ✅ Quand le ticket est fermé, on n'affiche plus les boutons sur l'embed principal.
+    // Les actions "Ré-ouvrir" / "Supprimer" seront portées par le message de confirmation.
+    return [];
   }
 
   return [

@@ -35,6 +35,19 @@ function buildStaffRoleMentions(staffRoleIds) {
   return ids.map((id) => `<@&${id}>`).join(" ");
 }
 
+function buildClosedActionsRow(ticketId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`ticket:reopen:${ticketId}`)
+      .setLabel("🔓 Ré-ouvrir")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`ticket:delete:${ticketId}`)
+      .setLabel("🗑️ Supprimer")
+      .setStyle(ButtonStyle.Danger)
+  );
+}
+
 async function refreshControlMessage(channel, client, ticket, type, panel) {
   try {
     let botMsg = null;
@@ -225,8 +238,20 @@ module.exports = {
       const updated = { ...ticket, status: "closed" };
       await refreshControlMessage(channel, client, updated, type, panel);
 
+      // ✅ Le message de confirmation devient le "panneau" des actions de ticket fermé.
+      // On retire les boutons Confirmer/Annuler, et on place Ré-ouvrir/Supprimer ici.
       try {
-        await interaction.message.edit({ components: [] });
+        await interaction.message.edit({
+          embeds: [
+            {
+              title: "✅ Ticket fermé",
+              description:
+                `Ce ticket est maintenant fermé.\n\n` +
+                `🔧 **Actions staff :** utilise les boutons ci-dessous.`,
+            },
+          ],
+          components: [buildClosedActionsRow(ticket.ticket_id)],
+        });
       } catch {}
 
       return interaction.reply({ content: "✅ Ticket fermé.", ephemeral: true });
@@ -262,6 +287,14 @@ module.exports = {
       await setTicketStatus(guildId, ticket.ticket_id, "open");
       const updated = { ...ticket, status: "open" };
       await refreshControlMessage(channel, client, updated, type, panel);
+
+      // ✅ Si le bouton vient du message de confirmation, on supprime ce message.
+      // (Le message principal de contrôle est celui stocké en DB: control_message_id)
+      try {
+        if (interaction.message?.id && String(interaction.message.id) !== String(ticket.control_message_id || "")) {
+          await interaction.message.delete();
+        }
+      } catch {}
 
       return interaction.reply({ content: "✅ Ticket ré-ouvert.", ephemeral: true });
     }
