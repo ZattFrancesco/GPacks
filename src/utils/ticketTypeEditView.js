@@ -16,6 +16,10 @@ function mentionRoles(roleIds) {
   return ids.map((id) => `<@&${id}>`).join(" ");
 }
 
+function mentionRole(roleId) {
+  return roleId ? `<@&${roleId}>` : "—";
+}
+
 function safeEmoji(e) {
   const s = String(e || "").trim();
   return s ? s : "—";
@@ -28,6 +32,7 @@ function buildTypeEditView(guild, type) {
   const staff = mentionRoles(type.staff_role_ids || []);
   const cat = type.category_opened_id ? `<#${type.category_opened_id}>` : "—";
   const custom = type.custom_embed_enabled ? "✅ Activé" : "❌ Désactivé";
+  const openPing = mentionRole(type.open_ping_role_id);
 
   const embed = new EmbedBuilder()
     .setTitle(`🧩 Édition du type : ${type.id}`)
@@ -37,6 +42,7 @@ function buildTypeEditView(guild, type) {
       { name: "Emoji", value: safeEmoji(type.emoji), inline: true },
       { name: "nameModalRename", value: yesNo(Boolean(type.namemodalrename)), inline: true },
       { name: "Catégorie d'ouverture", value: cat, inline: true },
+      { name: "📣 Ping à l'ouverture", value: openPing, inline: true },
       { name: "Rôles staff", value: staff, inline: false },
       {
         name: "Custom embed",
@@ -58,6 +64,7 @@ function buildTypeEditView(guild, type) {
       { label: "Emoji", value: "emoji", emoji: "😄" },
       { label: "Catégorie d'ouverture", value: "category", emoji: "🗂️" },
       { label: "Rôles staff", value: "roles", emoji: "👮" },
+      { label: "Ping à l'ouverture", value: "openping", emoji: "📣" },
       { label: "nameModalRename", value: "namemodalrename", emoji: "🧑‍💼" },
       { label: "Custom embed", value: "customembed", emoji: "📝" }
     );

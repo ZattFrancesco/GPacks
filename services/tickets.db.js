@@ -39,6 +39,8 @@ async function ensureTables() {
       category_opened_id VARCHAR(32) NULL,
       staff_role_ids_json TEXT NULL,
 
+      open_ping_role_id VARCHAR(32) NULL,
+
       custom_embed_enabled TINYINT(1) NOT NULL DEFAULT 0,
       custom_embed_title VARCHAR(256) NULL,
       custom_embed_description TEXT NULL,
@@ -108,6 +110,14 @@ async function ensureTables() {
 
 
   // Migrations légères (ajouts de colonnes sans casser si déjà existantes)
+  // Types
+  try {
+    await query("ALTER TABLE doj_ticket_types ADD COLUMN open_ping_role_id VARCHAR(32) NULL");
+  } catch {
+    // ignore
+  }
+
+  // Tickets
   const alters = [
     "ALTER TABLE doj_tickets ADD COLUMN control_message_id VARCHAR(32) NULL",
     "ALTER TABLE doj_tickets ADD COLUMN pending_close_message_id VARCHAR(32) NULL",
@@ -136,14 +146,16 @@ async function createType(guildId, payload) {
       guild_id, id,
       label, emoji, namemodalrename,
       category_opened_id, staff_role_ids_json,
+      open_ping_role_id,
       custom_embed_enabled, custom_embed_title, custom_embed_description
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE
       label=VALUES(label),
       emoji=VALUES(emoji),
       namemodalrename=VALUES(namemodalrename),
       category_opened_id=VALUES(category_opened_id),
       staff_role_ids_json=VALUES(staff_role_ids_json),
+      open_ping_role_id=VALUES(open_ping_role_id),
       custom_embed_enabled=VALUES(custom_embed_enabled),
       custom_embed_title=VALUES(custom_embed_title),
       custom_embed_description=VALUES(custom_embed_description)
@@ -156,6 +168,7 @@ async function createType(guildId, payload) {
       payload.nameModalRename ? 1 : 0,
       payload.categoryOpenedId || null,
       JSON.stringify(payload.staffRoleIds || []),
+      payload.openPingRoleId || null,
       payload.customEmbedEnabled ? 1 : 0,
       payload.customEmbedTitle || null,
       payload.customEmbedDescription || null,
@@ -210,6 +223,7 @@ async function updateType(guildId, typeId, patch) {
     "namemodalrename",
     "category_opened_id",
     "staff_role_ids_json",
+    "open_ping_role_id",
     "custom_embed_enabled",
     "custom_embed_title",
     "custom_embed_description",

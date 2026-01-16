@@ -29,6 +29,12 @@ module.exports = {
     .addRoleOption((o) => o.setName("staffrole3").setDescription("Rôle staff 3").setRequired(false))
     .addRoleOption((o) => o.setName("staffrole4").setDescription("Rôle staff 4").setRequired(false))
     .addRoleOption((o) => o.setName("staffrole5").setDescription("Rôle staff 5").setRequired(false))
+    .addRoleOption((o) =>
+      o
+        .setName("openpingrole")
+        .setDescription("Rôle à ping à l'ouverture du ticket (optionnel)")
+        .setRequired(false)
+    )
     .addBooleanOption((o) => o.setName("customembed").setDescription("Activer l'embed custom (modal)").setRequired(false)),
 
   async execute(interaction) {
@@ -41,6 +47,8 @@ module.exports = {
     const emoji = interaction.options.getString("emoji", false) || null;
     const nameModalRename = interaction.options.getBoolean("namemodalrename") || false;
     const customEmbed = interaction.options.getBoolean("customembed") || false;
+
+    const openPingRole = interaction.options.getRole("openpingrole", false);
 
     const staffRoleIds = [];
     for (let i = 1; i <= 5; i++) {
@@ -62,6 +70,7 @@ module.exports = {
         nameModalRename,
         categoryOpenedId: category.id,
         staffRoleIds,
+        openPingRoleId: openPingRole?.id || null,
         customEmbedEnabled: true,
       });
 
@@ -76,6 +85,7 @@ module.exports = {
       nameModalRename,
       categoryOpenedId: category.id,
       staffRoleIds,
+      openPingRoleId: openPingRole?.id || null,
       customEmbedEnabled: false,
     });
 

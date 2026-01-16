@@ -106,6 +106,10 @@ function buildTicketControlEmbed({ ticket, type, panel, channel }) {
     { name: "🗂️ Panel", value: `\`${panel?.id || ticket.panel_id}\``, inline: true },
   );
 
+  if (type?.open_ping_role_id) {
+    e.addFields({ name: "📣 Ping", value: `<@&${type.open_ping_role_id}>`, inline: true });
+  }
+
   if (fullName) {
     e.addFields({ name: "🧾 Identité", value: `\`${fullName}\``, inline: true });
   }

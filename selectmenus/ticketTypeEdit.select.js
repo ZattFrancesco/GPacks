@@ -5,6 +5,8 @@ const {
   RoleSelectMenuBuilder,
   ChannelType,
   EmbedBuilder,
+  ButtonBuilder,
+  ButtonStyle,
 } = require("discord.js");
 
 const { getType, updateType } = require("../services/tickets.db");
@@ -20,6 +22,7 @@ function buildBackRow(typeId) {
       { label: "Emoji", value: "emoji", emoji: "😄" },
       { label: "Catégorie d'ouverture", value: "category", emoji: "🗂️" },
       { label: "Rôles staff", value: "roles", emoji: "👮" },
+      { label: "Ping à l'ouverture", value: "openping", emoji: "📣" },
       { label: "nameModalRename", value: "namemodalrename", emoji: "🧑‍💼" },
       { label: "Custom embed", value: "customembed", emoji: "📝" }
     );
@@ -36,6 +39,7 @@ module.exports = {
     // tickettype:edit:field:<typeId>
     // tickettype:edit:category:<typeId>
     // tickettype:edit:roles:<typeId>
+    // tickettype:edit:openping:<typeId>
     const kind = parts[2];
     const typeId = parts[3];
 
@@ -96,6 +100,37 @@ module.exports = {
         });
       }
 
+      // --- openping => role select (1) + bouton pour retirer
+      if (choice === "openping") {
+        const embed = new EmbedBuilder()
+          .setTitle(`📣 Ping à l'ouverture — ${type.id}`)
+          .setDescription(
+            "Choisis **1 rôle** à ping quand un ticket de ce type s'ouvre.\n\n" +
+              "➡️ Si tu veux enlever le ping, clique **Aucun ping**."
+          )
+          .setFooter({ text: `Type ID: ${type.id}` });
+
+        const picker = new RoleSelectMenuBuilder()
+          .setCustomId(`tickettype:edit:openping:${type.id}`)
+          .setPlaceholder("Choisir le rôle à ping")
+          .setMinValues(1)
+          .setMaxValues(1);
+
+        const clearBtn = new ButtonBuilder()
+          .setCustomId(`tickettype:edit:toggle:${type.id}:openping:0`)
+          .setLabel("Aucun ping")
+          .setStyle(ButtonStyle.Secondary);
+
+        return interaction.update({
+          embeds: [embed],
+          components: [
+            new ActionRowBuilder().addComponents(picker),
+            new ActionRowBuilder().addComponents(clearBtn),
+            buildBackRow(type.id),
+          ],
+        });
+      }
+
       // --- namemodalrename => passer par les boutons déjà affichés sur dashboard
       if (choice === "namemodalrename") {
         const view = buildTypeEditView(interaction.guild, type);
@@ -111,6 +146,7 @@ module.exports = {
           nameModalRename: Boolean(type.namemodalrename),
           categoryOpenedId: type.category_opened_id || null,
           staffRoleIds: type.staff_role_ids || [],
+          openPingRoleId: type.open_ping_role_id || null,
           customEmbedEnabled: true,
           editMode: true,
         });
@@ -141,6 +177,15 @@ module.exports = {
     if (kind === "roles") {
       const roleIds = (interaction.values || []).filter(Boolean);
       await updateType(guildId, type.id, { staff_role_ids_json: JSON.stringify(roleIds) });
+      const fresh = await getType(guildId, type.id);
+      const view = buildTypeEditView(interaction.guild, fresh);
+      return interaction.update({ ...view });
+    }
+
+    // 4) Open ping role selection
+    if (kind === "openping") {
+      const roleId = interaction.values?.[0] || null;
+      await updateType(guildId, type.id, { open_ping_role_id: roleId });
       const fresh = await getType(guildId, type.id);
       const view = buildTypeEditView(interaction.guild, fresh);
       return interaction.update({ ...view });

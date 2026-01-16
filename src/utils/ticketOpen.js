@@ -143,8 +143,11 @@ const categoryId = type.category_opened_id || null;
   });
 
   // Embed de contrôle + boutons (envoyé en premier)
+  const contentParts = [`<@${author.id}>`];
+  if (type?.open_ping_role_id) contentParts.push(`<@&${type.open_ping_role_id}>`);
+
   const controlMsg = await channel.send({
-    content: `<@${author.id}>`,
+    content: contentParts.join(" "),
     embeds: [
       buildTicketControlEmbed({
         ticket: {

@@ -23,6 +23,15 @@ module.exports = {
       return interaction.update({ ...view });
     }
 
+    if (key === "openping") {
+      // value "0" => disable
+      const v = value && value !== "0" ? String(value) : null;
+      await updateType(guildId, type.id, { open_ping_role_id: v });
+      const fresh = await getType(guildId, type.id);
+      const view = buildTypeEditView(interaction.guild, fresh);
+      return interaction.update({ ...view });
+    }
+
     return interaction.reply({ content: "❌ Action inconnue.", ephemeral: true });
   },
 };
