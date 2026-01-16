@@ -17,6 +17,10 @@ const { isBlacklisted } = require("../../services/blacklist.db");
 function sanitizeChannelPart(s) {
   return String(s || "")
     .trim()
+    // Discord n'autorise pas les accents dans les noms de salon.
+    // On "désaccentue" d'abord (é -> e, è -> e, à -> a, ...)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, "-")
     .replace(/-+/g, "-")
