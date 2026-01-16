@@ -333,4 +333,153 @@ module.exports = {
   getCountsByJudge,
   listReports,
   getReportCount,
+  // édition
+  getReportById,
+  updateReportById,
 };
+
+/**
+ * 🔎 Récupère un rapport par id (sécurisé par guild_id)
+ */
+async function getReportById(guildId, reportId) {
+  if (!guildId || !reportId) return null;
+  await ensureTables();
+
+  const id = Number(reportId);
+  if (!Number.isFinite(id) || id <= 0) return null;
+
+  const rows = await query(
+    `SELECT
+        id,
+        guild_id,
+        reporter_user_id,
+        created_at,
+        date_jugement_unix,
+        nom, prenom,
+        judge_user_id,
+        judge_name,
+        judge_key,
+        procureur,
+        avocat,
+        peine,
+        amende,
+        tig,
+        tig_entreprise,
+        observation
+     FROM doj_jugement_reports
+     WHERE guild_id = ? AND id = ?
+     LIMIT 1`,
+    [guildId, id]
+  );
+
+  return rows?.[0] || null;
+}
+
+function buildJudgeFieldsFromInput(input) {
+  const raw = String(input ?? "").trim();
+  const uid = extractUserId(raw);
+  const name = raw || "/";
+  const key = uid ? `U:${uid}` : `T:${normalizeTextKey(name)}`;
+  return { judge_user_id: uid, judge_name: name, judge_key: key };
+}
+
+function normalizeNullableText(v) {
+  const s = String(v ?? "").trim();
+  return s.length ? s : null;
+}
+
+/**
+ * ✏️ Met à jour un rapport par id.
+ * - Sécurisé par guild_id
+ * - Whitelist stricte des champs
+ */
+async function updateReportById(guildId, reportId, patch = {}) {
+  if (!guildId || !reportId) return false;
+  await ensureTables();
+
+  const id = Number(reportId);
+  if (!Number.isFinite(id) || id <= 0) return false;
+
+  const allowed = new Set([
+    "date_jugement_unix",
+    "nom",
+    "prenom",
+    "judge_name",
+    "procureur",
+    "avocat",
+    "peine",
+    "amende",
+    "tig",
+    "tig_entreprise",
+    "observation",
+  ]);
+
+  const updates = [];
+  const params = [];
+
+  // Date
+  if (Object.prototype.hasOwnProperty.call(patch, "date_jugement_unix") && allowed.has("date_jugement_unix")) {
+    const v = patch.date_jugement_unix;
+    const n = v === null || v === "" ? null : Number(v);
+    updates.push("date_jugement_unix = ?");
+    params.push(Number.isFinite(n) ? Math.floor(n) : null);
+  }
+
+  // Nom / Prénom
+  if (Object.prototype.hasOwnProperty.call(patch, "nom") && allowed.has("nom")) {
+    const s = String(patch.nom ?? "").trim();
+    updates.push("nom = ?");
+    params.push(s.length ? s.slice(0, 128) : "");
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "prenom") && allowed.has("prenom")) {
+    const s = String(patch.prenom ?? "").trim();
+    updates.push("prenom = ?");
+    params.push(s.length ? s.slice(0, 128) : "");
+  }
+
+  // Juge : si on modifie judge_name, on recalcule judge_user_id + judge_key
+  if (Object.prototype.hasOwnProperty.call(patch, "judge_name") && allowed.has("judge_name")) {
+    const jf = buildJudgeFieldsFromInput(patch.judge_name);
+    updates.push("judge_user_id = ?", "judge_name = ?", "judge_key = ?");
+    params.push(jf.judge_user_id, jf.judge_name.slice(0, 255), jf.judge_key.slice(0, 255));
+  }
+
+  // Textes
+  for (const k of ["procureur", "avocat", "amende", "tig_entreprise"]) {
+    if (!Object.prototype.hasOwnProperty.call(patch, k) || !allowed.has(k)) continue;
+    const s = normalizeNullableText(patch[k]);
+    updates.push(`${k} = ?`);
+    params.push(s ? s.slice(0, 255) : null);
+  }
+
+  for (const k of ["peine", "observation"]) {
+    if (!Object.prototype.hasOwnProperty.call(patch, k) || !allowed.has(k)) continue;
+    const s = normalizeNullableText(patch[k]);
+    updates.push(`${k} = ?`);
+    params.push(s);
+  }
+
+  // TIG
+  if (Object.prototype.hasOwnProperty.call(patch, "tig") && allowed.has("tig")) {
+    const v = patch.tig;
+    const b = v === true || v === 1 || v === "1" || String(v).toLowerCase() === "oui" || String(v).toLowerCase() === "true";
+    updates.push("tig = ?");
+    params.push(b ? 1 : 0);
+
+    // Si on désactive TIG, on vide l'entreprise (si non fourni explicitement)
+    if (!b && !Object.prototype.hasOwnProperty.call(patch, "tig_entreprise")) {
+      updates.push("tig_entreprise = NULL");
+    }
+  }
+
+  if (!updates.length) return false;
+
+  params.push(guildId, id);
+  await query(
+    `UPDATE doj_jugement_reports
+     SET ${updates.join(", ")}
+     WHERE guild_id = ? AND id = ?`,
+    params
+  );
+  return true;
+}
