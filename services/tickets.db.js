@@ -26,6 +26,21 @@ function safeJsonParse(v, fallback) {
 async function ensureTables() {
   if (ensured) return;
 
+  // Petit helper: éviter les ALTER bruyants ("Duplicate column")
+  // en vérifiant d'abord si la colonne existe.
+  async function columnExists(tableName, columnName) {
+    const rows = await query(
+      `SELECT COUNT(*) AS c
+       FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = ?
+         AND COLUMN_NAME = ?`,
+      [tableName, columnName]
+    );
+    const c = rows && rows[0] ? Number(rows[0].c) : 0;
+    return c > 0;
+  }
+
   // Types
   await query(`
     CREATE TABLE IF NOT EXISTS doj_ticket_types (
@@ -109,26 +124,21 @@ async function ensureTables() {
   `);
 
 
-  // Migrations légères (ajouts de colonnes sans casser si déjà existantes)
+  // Migrations légères (silencieuses) : on ajoute seulement si manquant.
   // Types
-  try {
+  if (!(await columnExists("doj_ticket_types", "open_ping_role_id"))) {
     await query("ALTER TABLE doj_ticket_types ADD COLUMN open_ping_role_id VARCHAR(32) NULL");
-  } catch {
-    // ignore
   }
 
   // Tickets
-  const alters = [
-    "ALTER TABLE doj_tickets ADD COLUMN control_message_id VARCHAR(32) NULL",
-    "ALTER TABLE doj_tickets ADD COLUMN pending_close_message_id VARCHAR(32) NULL",
-    "ALTER TABLE doj_tickets ADD COLUMN pending_close_at TIMESTAMP NULL",
-  ];
-  for (const sql of alters) {
-    try {
-      await query(sql);
-    } catch {
-      // ignore (colonne déjà existante, etc.)
-    }
+  if (!(await columnExists("doj_tickets", "control_message_id"))) {
+    await query("ALTER TABLE doj_tickets ADD COLUMN control_message_id VARCHAR(32) NULL");
+  }
+  if (!(await columnExists("doj_tickets", "pending_close_message_id"))) {
+    await query("ALTER TABLE doj_tickets ADD COLUMN pending_close_message_id VARCHAR(32) NULL");
+  }
+  if (!(await columnExists("doj_tickets", "pending_close_at"))) {
+    await query("ALTER TABLE doj_tickets ADD COLUMN pending_close_at TIMESTAMP NULL");
   }
 
   ensured = true;

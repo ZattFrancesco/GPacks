@@ -33,6 +33,11 @@ module.exports = {
       return interaction.reply({ content: "❌ Demande expirée. Recommence depuis le panel.", ephemeral: true });
     }
 
+    // IMPORTANT : un modal doit répondre en < 3s.
+    // On defer tout de suite pour éviter DiscordAPIError[10062] (Unknown interaction)
+    // si la création du salon / requêtes DB prennent trop de temps.
+    await interaction.deferReply({ ephemeral: true });
+
     const prenom = interaction.fields.getTextInputValue("prenom").trim();
     const nom = interaction.fields.getTextInputValue("nom").trim();
     clearOpenDraft(guildId, interaction.user.id);
@@ -40,7 +45,7 @@ module.exports = {
     const panel = await getPanel(guildId, draft.panelId);
     const type = await getType(guildId, draft.typeId);
     if (!panel || !type) {
-      return interaction.reply({ content: "❌ Panel/type introuvable.", ephemeral: true });
+      return interaction.editReply({ content: "❌ Panel/type introuvable." });
     }
 
     // Change pseudo serveur (best effort)
