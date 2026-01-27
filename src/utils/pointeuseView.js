@@ -31,7 +31,7 @@ function buildPanelMessage() {
 
 function buildRecapMessage({ weekId, totals }) {
   const lines = (totals || [])
-    .map((t) => `- membre <@${t.userId}> : ${formatHmFromMinutes(t.totalMinutes)}`);
+    .map((t) => `- <@${t.userId}> : ${formatHmFromMinutes(t.totalMinutes)}`);
 
   const desc = lines.length ? lines.join("\n") : "_Aucune entrée pour cette semaine._";
 
