@@ -72,7 +72,7 @@ module.exports = {
     const action = interaction.options.getString("action", true);
     const heures = interaction.options.getInteger("heures", true);
     const minutes = interaction.options.getInteger("minutes", true);
-    const raison = interaction.options.getString("raison", true).trim();
+    const reason = interaction.options.getString("raison", true).trim();
 
     const durationMin = parseDuration(heures, minutes);
     if (durationMin === null || durationMin === 0) {

@@ -188,13 +188,18 @@ const categoryId = type.category_opened_id || null;
   }
 
 
-  // Réponse propre au user
-  if (interaction.deferred || interaction.replied) {
-    try {
+  // Réponse propre au user (robuste contre les délais / modals)
+  try {
+    if (interaction.deferred && !interaction.replied) {
+      // Cas typique: ModalSubmitInteraction.deferReply(...) puis traitement long
+      await interaction.editReply({ content: `✅ Ticket créé : <#${channel.id}>` });
+    } else if (interaction.replied) {
       await interaction.followUp({ content: `✅ Ticket créé : <#${channel.id}>`, ephemeral: true });
-    } catch {}
-  } else {
-    await interaction.reply({ content: `✅ Ticket créé : <#${channel.id}>`, ephemeral: true });
+    } else {
+      await interaction.reply({ content: `✅ Ticket créé : <#${channel.id}>`, ephemeral: true });
+    }
+  } catch {
+    // best effort (évite crash si token expiré)
   }
 
   return { channel, ticketId };

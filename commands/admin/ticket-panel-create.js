@@ -38,6 +38,9 @@ module.exports = {
     .addStringOption((o) => o.setName("banner_url").setDescription("Image URL").setRequired(false)),
 
   async execute(interaction) {
+    // DB + envoi de message peuvent dépasser le délai de réponse Discord.
+    await interaction.deferReply({ ephemeral: true });
+
     const guildId = interaction.guildId;
 
     const panelId = interaction.options.getString("id", true);
@@ -56,10 +59,16 @@ module.exports = {
     const requested = parseTypeList(typeRaw);
     const typeIds = requested.filter((t) => allowed.has(t));
 
+    // Le panel doit être posté dans un salon textuel (pas une catégorie/voice/etc.)
+    if (!channel || typeof channel.send !== "function") {
+      return interaction.editReply({
+        content: "❌ Ce salon ne permet pas d'envoyer des messages. Choisis un salon texte.",
+      });
+    }
+
     if (!typeIds.length) {
-      return interaction.reply({
+      return interaction.editReply({
         content: "❌ Aucun type valide. Vérifie /ticket-type-create puis mets les IDs ici.",
-        ephemeral: true,
       });
     }
 
@@ -91,9 +100,8 @@ module.exports = {
 
     await createPanel(guildId, { ...panelPayload, messageId: msg.id });
 
-    return interaction.reply({
+    return interaction.editReply({
       content: `✅ Panel **${panelId}** posté dans <#${channel.id}> (message: ${msg.id}).`,
-      ephemeral: true,
     });
   },
 };
