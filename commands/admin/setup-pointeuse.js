@@ -13,12 +13,12 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-      return interaction.reply({ content: "❌ Admin uniquement.", ephemeral: true });
+      return interaction.reply({ content: "❌ Admin uniquement.", flags: 64 });
     }
 
     await pointeuseDb.ensureSettingsRow(interaction.guildId);
     const settings = await pointeuseDb.getSettings(interaction.guildId);
     const payload = buildDashboard(settings);
-    return interaction.reply({ ...payload, ephemeral: true });
+    return interaction.reply({ ...payload, flags: 64 });
   },
 };

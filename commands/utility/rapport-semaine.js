@@ -131,7 +131,7 @@ module.exports = {
 
     if (!rows.length) {
       embed.addFields({ name: "Rapports", value: "_Aucun rapport._" });
-      return interaction.reply({ embeds: [embed], components: buildComponents("week", ownerId, session, page, pages, limit, !!search), ephemeral: true });
+      return interaction.reply({ embeds: [embed], components: buildComponents("week", ownerId, session, page, pages, limit, !!search), flags: 64 });
     }
 
     rows.forEach((r, idx) => {
@@ -168,7 +168,7 @@ module.exports = {
     return interaction.reply({
       embeds: [embed],
       components: buildComponents("week", ownerId, session, page, pages, limit, !!search),
-      ephemeral: true,
+      flags: 64,
     });
   },
 };

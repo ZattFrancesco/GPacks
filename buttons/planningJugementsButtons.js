@@ -68,9 +68,9 @@ async function refreshPlanningMessage(interaction, guildId) {
   if (!rec) {
     try {
       if (!interaction.deferred && !interaction.replied) {
-        await interaction.reply({ content: "Planning introuvable. Relance /planning-jugements pour recréer le message.", ephemeral: true });
+        await interaction.reply({ content: "Planning introuvable. Relance /planning-jugements pour recréer le message.", flags: 64 });
       } else {
-        await interaction.followUp({ content: "Planning introuvable. Relance /planning-jugements pour recréer le message.", ephemeral: true });
+        await interaction.followUp({ content: "Planning introuvable. Relance /planning-jugements pour recréer le message.", flags: 64 });
       }
     } catch (_) {}
     return false;
@@ -109,12 +109,12 @@ async function refreshPlanningMessage(interaction, guildId) {
         if (!interaction.deferred && !interaction.replied) {
           await interaction.reply({
             content: "Le message du planning est introuvable (supprimé ou salon inaccessible). Relance /planning-jugements pour le recréer.",
-            ephemeral: true,
+            flags: 64,
           });
         } else {
           await interaction.followUp({
             content: "Le message du planning est introuvable (supprimé ou salon inaccessible). Relance /planning-jugements pour le recréer.",
-            ephemeral: true,
+            flags: 64,
           });
         }
       } catch (_) {}
@@ -271,7 +271,7 @@ module.exports = {
       const ownerId = parts[3];
       const week = parts[4];
       if (ownerId !== userId) {
-        return interaction.reply({ content: "❌ Ce bouton ne t'est pas destiné.", ephemeral: true });
+        return interaction.reply({ content: "❌ Ce bouton ne t'est pas destiné.", flags: 64 });
       }
       // modal date/heure
       return interaction.showModal(buildDateModal(`jplanmodal:add:step2:${week}`, "Ajouter — Date/Heure"));
@@ -281,11 +281,11 @@ module.exports = {
     if (interaction.customId.startsWith("jplan:edit:start:")) {
       const week = interaction.customId.split(":")[3];
       const rec = await getPlanningMessage(guildId);
-      if (!rec) return interaction.reply({ content: "❌ Aucun planning configuré. Lance /planning-jugements.", ephemeral: true });
+      if (!rec) return interaction.reply({ content: "❌ Aucun planning configuré. Lance /planning-jugements.", flags: 64 });
 
       const entries = await listEntriesForWeek(guildId, week);
       if (!entries.length) {
-        return interaction.reply({ content: "❌ Rien à modifier cette semaine.", ephemeral: true });
+        return interaction.reply({ content: "❌ Rien à modifier cette semaine.", flags: 64 });
       }
 
       const options = entries.slice(0, 25).map((e) => {
@@ -301,7 +301,7 @@ module.exports = {
           .addOptions(options)
       );
 
-      return interaction.reply({ content: "Choisis l'entrée à modifier :", components: [row], ephemeral: true });
+      return interaction.reply({ content: "Choisis l'entrée à modifier :", components: [row], flags: 64 });
     }
 
     if (interaction.customId.startsWith("jplan:edit:open:")) {
@@ -311,11 +311,11 @@ module.exports = {
       const ownerId = parts[4];
 
       if (ownerId !== userId) {
-        return interaction.reply({ content: "❌ Ce bouton ne t'est pas destiné.", ephemeral: true });
+        return interaction.reply({ content: "❌ Ce bouton ne t'est pas destiné.", flags: 64 });
       }
 
       const entry = await getEntryById(guildId, idJudge);
-      if (!entry) return interaction.reply({ content: "❌ Entrée introuvable.", ephemeral: true });
+      if (!entry) return interaction.reply({ content: "❌ Entrée introuvable.", flags: 64 });
 
       clearDraft(guildId, userId);
 
@@ -328,10 +328,10 @@ module.exports = {
       const parts = interaction.customId.split(":");
       const idJudge = Number(parts[3]);
       const ownerId = parts[4];
-      if (ownerId !== userId) return interaction.reply({ content: "❌ Ce bouton ne t'est pas destiné.", ephemeral: true });
+      if (ownerId !== userId) return interaction.reply({ content: "❌ Ce bouton ne t'est pas destiné.", flags: 64 });
 
       const entry = await getEntryById(guildId, idJudge);
-      if (!entry) return interaction.reply({ content: "❌ Entrée introuvable.", ephemeral: true });
+      if (!entry) return interaction.reply({ content: "❌ Entrée introuvable.", flags: 64 });
 
       const dt = toLocalFromMysqlDatetime(entry.judgement_datetime);
       const defaults = {
@@ -348,11 +348,11 @@ module.exports = {
     if (interaction.customId.startsWith("jplan:del:start:")) {
       const week = interaction.customId.split(":")[3];
       const rec = await getPlanningMessage(guildId);
-      if (!rec) return interaction.reply({ content: "❌ Aucun planning configuré. Lance /planning-jugements.", ephemeral: true });
+      if (!rec) return interaction.reply({ content: "❌ Aucun planning configuré. Lance /planning-jugements.", flags: 64 });
 
       const entries = await listEntriesForWeek(guildId, week);
       if (!entries.length) {
-        return interaction.reply({ content: "❌ Rien à supprimer cette semaine.", ephemeral: true });
+        return interaction.reply({ content: "❌ Rien à supprimer cette semaine.", flags: 64 });
       }
 
       const options = entries.slice(0, 25).map((e) => {
@@ -368,7 +368,7 @@ module.exports = {
           .addOptions(options)
       );
 
-      return interaction.reply({ content: "Choisis l'entrée à supprimer :", components: [row], ephemeral: true });
+      return interaction.reply({ content: "Choisis l'entrée à supprimer :", components: [row], flags: 64 });
     }
 
     if (interaction.customId.startsWith("jplan:del:confirm:")) {
@@ -378,7 +378,7 @@ module.exports = {
       const ownerId = parts[4];
       const choice = parts[5];
 
-      if (ownerId !== userId) return interaction.reply({ content: "❌ Ce bouton ne t'est pas destiné.", ephemeral: true });
+      if (ownerId !== userId) return interaction.reply({ content: "❌ Ce bouton ne t'est pas destiné.", flags: 64 });
 
       if (choice === "no") {
         return interaction.update({ content: "✅ Suppression annulée.", components: [] });
@@ -399,7 +399,7 @@ module.exports = {
     // --- WEEK NAV ---
     if (interaction.customId === "jplan:week:prev" || interaction.customId === "jplan:week:next") {
       const rec = await getPlanningMessage(guildId);
-      if (!rec) return interaction.reply({ content: "❌ Aucun planning configuré. Lance /planning-jugements.", ephemeral: true });
+      if (!rec) return interaction.reply({ content: "❌ Aucun planning configuré. Lance /planning-jugements.", flags: 64 });
 
       const monday = toLocalDateFromMysqlDate(rec.week_monday);
       monday.setDate(monday.getDate() + (interaction.customId === "jplan:week:prev" ? -7 : 7));
@@ -417,6 +417,6 @@ module.exports = {
       return;
     }
 
-    return interaction.reply({ content: "❌ Action inconnue.", ephemeral: true });
+    return interaction.reply({ content: "❌ Action inconnue.", flags: 64 });
   },
 };

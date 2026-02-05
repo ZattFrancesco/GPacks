@@ -54,7 +54,7 @@ module.exports = {
         weekMonday,
       });
 
-      return interaction.reply({ content: "✅ Planning créé.", ephemeral: true });
+      return interaction.reply({ content: "✅ Planning créé.", flags: 64 });
     }
 
     // si trouvé -> MAJ (et si le planning était ailleurs, on garde ce choix)
@@ -71,6 +71,6 @@ module.exports = {
       weekMonday: targetWeek,
     });
 
-    return interaction.reply({ content: "✅ Planning mis à jour.", ephemeral: true });
+    return interaction.reply({ content: "✅ Planning mis à jour.", flags: 64 });
   },
 };

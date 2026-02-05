@@ -129,7 +129,7 @@ module.exports = {
       return interaction.reply({
         embeds: [embed],
         components: buildComponents("all", ownerId, session, page, pages, limit, !!search),
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -167,7 +167,7 @@ module.exports = {
     return interaction.reply({
       embeds: [embed],
       components: buildComponents("all", ownerId, session, page, pages, limit, !!search),
-      ephemeral: true,
+      flags: 64,
     });
   },
 };

@@ -16,14 +16,14 @@ module.exports = [
   {
     id: "hier:pick_tier_edit",
     async execute(interaction) {
-      if (!isOwner(interaction.user.id)) return interaction.reply({ content: "❌ Owner only.", ephemeral: true });
+      if (!isOwner(interaction.user.id)) return interaction.reply({ content: "❌ Owner only.", flags: 64 });
 
       const tierId = interaction.values?.[0];
-      if (!tierId || tierId === "none") return interaction.reply({ content: "❌ Aucun palier.", ephemeral: true });
+      if (!tierId || tierId === "none") return interaction.reply({ content: "❌ Aucun palier.", flags: 64 });
 
       const tiers = await db.listTiers(interaction.guildId);
       const tier = tiers.find(t => String(t.id) === String(tierId));
-      if (!tier) return interaction.reply({ content: "❌ Palier introuvable.", ephemeral: true });
+      if (!tier) return interaction.reply({ content: "❌ Palier introuvable.", flags: 64 });
 
       const modal = new ModalBuilder().setCustomId(`hier:modal_tier_edit:${tier.id}`).setTitle("Modifier un palier");
 
@@ -52,13 +52,13 @@ module.exports = [
   {
     id: "hier:pick_tier_delete",
     async execute(interaction) {
-      if (!isOwner(interaction.user.id)) return interaction.reply({ content: "❌ Owner only.", ephemeral: true });
+      if (!isOwner(interaction.user.id)) return interaction.reply({ content: "❌ Owner only.", flags: 64 });
 
       const tierId = interaction.values?.[0];
-      if (!tierId || tierId === "none") return interaction.reply({ content: "❌ Aucun palier.", ephemeral: true });
+      if (!tierId || tierId === "none") return interaction.reply({ content: "❌ Aucun palier.", flags: 64 });
 
       await db.deleteTier(interaction.guildId, tierId);
-      return interaction.reply({ content: "✅ Palier supprimé.", ephemeral: true });
+      return interaction.reply({ content: "✅ Palier supprimé.", flags: 64 });
     },
   },
 
@@ -66,17 +66,17 @@ module.exports = [
   {
     id: "hier:pick_tier_move",
     async execute(interaction) {
-      if (!isOwner(interaction.user.id)) return interaction.reply({ content: "❌ Owner only.", ephemeral: true });
+      if (!isOwner(interaction.user.id)) return interaction.reply({ content: "❌ Owner only.", flags: 64 });
 
       const tierId = interaction.values?.[0];
-      if (!tierId || tierId === "none") return interaction.reply({ content: "❌ Aucun palier.", ephemeral: true });
+      if (!tierId || tierId === "none") return interaction.reply({ content: "❌ Aucun palier.", flags: 64 });
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`hier:move_up:${tierId}`).setLabel("⬆️ Monter").setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId(`hier:move_down:${tierId}`).setLabel("⬇️ Descendre").setStyle(ButtonStyle.Secondary)
       );
 
-      return interaction.reply({ content: "Choisis le sens :", components: [row], ephemeral: true });
+      return interaction.reply({ content: "Choisis le sens :", components: [row], flags: 64 });
     },
   },
 
@@ -84,10 +84,10 @@ module.exports = [
   {
     id: "hier:pick_tier_roles",
     async execute(interaction) {
-      if (!isOwner(interaction.user.id)) return interaction.reply({ content: "❌ Owner only.", ephemeral: true });
+      if (!isOwner(interaction.user.id)) return interaction.reply({ content: "❌ Owner only.", flags: 64 });
 
       const tierId = interaction.values?.[0];
-      if (!tierId || tierId === "none") return interaction.reply({ content: "❌ Aucun palier.", ephemeral: true });
+      if (!tierId || tierId === "none") return interaction.reply({ content: "❌ Aucun palier.", flags: 64 });
 
       const roleMenu = new RoleSelectMenuBuilder()
         .setCustomId(`hier:roles_for_tier:${tierId}`)
@@ -98,7 +98,7 @@ module.exports = [
       return interaction.reply({
         content: "Sélectionne les rôles qui appartiennent à ce palier :",
         components: [new ActionRowBuilder().addComponents(roleMenu)],
-        ephemeral: true,
+        flags: 64,
       });
     },
   },

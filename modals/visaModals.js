@@ -74,7 +74,7 @@ module.exports = {
     const [, step, ownerId] = String(interaction.customId).split(":");
 
     if (interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Pas ton formulaire.", ephemeral: true });
+      return interaction.reply({ content: "❌ Pas ton formulaire.", flags: 64 });
     }
 
     await ensureTables();
@@ -105,7 +105,7 @@ module.exports = {
         content: "✅ Brouillon créé. Choisis **Statut** + **Facture**, puis complète si besoin et clique **Enregistrer**.",
         embeds: [embed],
         components: buildDraftComponents(ownerId),
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -113,7 +113,7 @@ module.exports = {
     if (step === "exp") {
       const draft = getVisaDraft(interaction.guildId, ownerId);
       if (!draft) {
-        return interaction.reply({ content: "⏱️ Brouillon expiré (15 min). Relance /visa-creation.", ephemeral: true });
+        return interaction.reply({ content: "⏱️ Brouillon expiré (15 min). Relance /visa-creation.", flags: 64 });
       }
 
       const y = Number(safeVal(interaction, "year"));
@@ -121,7 +121,7 @@ module.exports = {
       const d = Number(safeVal(interaction, "day"));
 
       if (!Number.isFinite(y) || y < 2000 || y > 2100 || !Number.isFinite(m) || m < 1 || m > 12 || !Number.isFinite(d) || d < 1 || d > 31) {
-        return interaction.reply({ content: "❌ Date invalide. Exemple: 2026 / 1 / 6", ephemeral: true });
+        return interaction.reply({ content: "❌ Date invalide. Exemple: 2026 / 1 / 6", flags: 64 });
       }
 
       const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
@@ -141,7 +141,7 @@ module.exports = {
     if (step === "emploi") {
       const draft = getVisaDraft(interaction.guildId, ownerId);
       if (!draft) {
-        return interaction.reply({ content: "⏱️ Brouillon expiré (15 min). Relance /visa-creation.", ephemeral: true });
+        return interaction.reply({ content: "⏱️ Brouillon expiré (15 min). Relance /visa-creation.", flags: 64 });
       }
 
       updateVisaDraft(interaction.guildId, ownerId, {
@@ -158,7 +158,7 @@ module.exports = {
     if (step === "permis") {
       const draft = getVisaDraft(interaction.guildId, ownerId);
       if (!draft) {
-        return interaction.reply({ content: "⏱️ Brouillon expiré (15 min). Relance /visa-creation.", ephemeral: true });
+        return interaction.reply({ content: "⏱️ Brouillon expiré (15 min). Relance /visa-creation.", flags: 64 });
       }
 
       updateVisaDraft(interaction.guildId, ownerId, {
@@ -174,7 +174,7 @@ module.exports = {
     if (step === "raison") {
       const draft = getVisaDraft(interaction.guildId, ownerId);
       if (!draft) {
-        return interaction.reply({ content: "⏱️ Brouillon expiré (15 min). Relance /visa-creation.", ephemeral: true });
+        return interaction.reply({ content: "⏱️ Brouillon expiré (15 min). Relance /visa-creation.", flags: 64 });
       }
 
       updateVisaDraft(interaction.guildId, ownerId, {
@@ -189,9 +189,9 @@ module.exports = {
     // STEP SAVE: finalisation depuis un modal (rare) -> pas utilisé ici
     if (step === "save") {
       // pas utilisé
-      return interaction.reply({ content: "❌ Action invalide.", ephemeral: true });
+      return interaction.reply({ content: "❌ Action invalide.", flags: 64 });
     }
 
-    return interaction.reply({ content: "❌ Modal inconnu.", ephemeral: true });
+    return interaction.reply({ content: "❌ Modal inconnu.", flags: 64 });
   },
 };

@@ -26,7 +26,7 @@ module.exports = {
     const [, step, userId] = interaction.customId.split(":");
 
     if (interaction.user.id !== userId) {
-      return interaction.reply({ content: "❌ Pas ton formulaire.", ephemeral: true });
+      return interaction.reply({ content: "❌ Pas ton formulaire.", flags: 64 });
     }
 
     await ensureTables();
@@ -70,7 +70,7 @@ module.exports = {
 
       return interaction.reply({
         content: "✅ Étape 1 enregistrée.\nSélectionne les rôles (multi possible), puis clique **Continuer**.",
-        ephemeral: true,
+        flags: 64,
         components: [rowJuge, rowProc, rowAvocat, ...panel(userId)],
       });
     }
@@ -81,7 +81,7 @@ module.exports = {
       if (!draft) {
         return interaction.reply({
           content: "⏱️ Rapport expiré. Relance /rapport-jugement.",
-          ephemeral: true,
+          flags: 64,
         });
       }
 

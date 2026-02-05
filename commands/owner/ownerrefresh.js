@@ -20,7 +20,7 @@ module.exports = {
     if (!OWNER_ID || interaction.user.id !== OWNER_ID) {
       return interaction.reply({
         content: "❌ Cette commande est réservée au propriétaire du bot.",
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -28,7 +28,7 @@ module.exports = {
     if (!TOKEN || !CLIENT_ID) {
       return interaction.reply({
         content: "❌ DISCORD_TOKEN ou CLIENT_ID manquant dans le .env.",
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -37,13 +37,13 @@ module.exports = {
     if (!guildId) {
       return interaction.reply({
         content: "❌ Cette commande doit être utilisée dans un serveur.",
-        ephemeral: true,
+        flags: 64,
       });
     }
 
     await interaction.reply({
       content: `♻️ Nettoyage des commandes **locales (GUILD)** pour ce serveur (\`${guildId}\`)…`,
-      ephemeral: true,
+      flags: 64,
     });
 
     try {

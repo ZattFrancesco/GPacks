@@ -39,7 +39,7 @@ module.exports = {
 
   async execute(interaction) {
     // DB + envoi de message peuvent dépasser le délai de réponse Discord.
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: 64 });
 
     const guildId = interaction.guildId;
 

@@ -65,7 +65,7 @@ module.exports = {
 
     // Staff roles + bypass admin
     if (!isStaff(interaction.member, settings)) {
-      return interaction.reply({ content: "❌ Staff uniquement.", ephemeral: true });
+      return interaction.reply({ content: "❌ Staff uniquement.", flags: 64 });
     }
 
     const target = interaction.options.getUser("membre", true);
@@ -76,7 +76,7 @@ module.exports = {
 
     const durationMin = parseDuration(heures, minutes);
     if (durationMin === null || durationMin === 0) {
-      return interaction.reply({ content: "❌ Durée invalide.", ephemeral: true });
+      return interaction.reply({ content: "❌ Durée invalide.", flags: 64 });
     }
 
     const weekId = await ensureActiveWeek(interaction.guildId);
@@ -87,7 +87,7 @@ module.exports = {
       if (durationMin > current) {
         return interaction.reply({
           content: `❌ Impossible de retirer **${heures}h ${minutes}m** : total actuel = ${Math.floor(current / 60)}h ${current % 60}m.`,
-          ephemeral: true,
+          flags: 64,
         });
       }
     }
@@ -123,7 +123,7 @@ module.exports = {
       content:
         `✅ Ajustement effectué pour ${target} (**${action} ${heures}h ${minutes}m**).\n` +
         `Semaine: **${weekId}**`,
-      ephemeral: true,
+      flags: 64,
     });
   },
 };

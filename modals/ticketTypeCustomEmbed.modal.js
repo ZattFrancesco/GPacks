@@ -48,7 +48,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const draft = getTypeCreateDraft(guildId, interaction.user.id);
     if (!draft) {
-      return interaction.reply({ content: "❌ Demande expirée. Recommence la commande.", ephemeral: true });
+      return interaction.reply({ content: "❌ Demande expirée. Recommence la commande.", flags: 64 });
     }
 
     const enabledRaw = interaction.fields.getTextInputValue("enabled");
@@ -64,7 +64,7 @@ module.exports = {
         custom_embed_title: enabled ? title : null,
         custom_embed_description: enabled ? description : null,
       });
-      return interaction.reply({ content: "✅ Custom embed mis à jour.", ephemeral: true });
+      return interaction.reply({ content: "✅ Custom embed mis à jour.", flags: 64 });
     }
 
     const finalId = await createType(guildId, {
@@ -74,6 +74,6 @@ module.exports = {
       customEmbedDescription: enabled ? description : null,
     });
 
-    return interaction.reply({ content: `✅ Type **${finalId}** enregistré (custom embed).`, ephemeral: true });
+    return interaction.reply({ content: `✅ Type **${finalId}** enregistré (custom embed).`, flags: 64 });
   },
 };

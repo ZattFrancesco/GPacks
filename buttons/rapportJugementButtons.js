@@ -34,7 +34,7 @@ module.exports = {
     const [, action, ownerId] = interaction.customId.split(":");
 
     if (interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Pas ton rapport.", ephemeral: true });
+      return interaction.reply({ content: "❌ Pas ton rapport.", flags: 64 });
     }
 
     if (action === "cancel") {
@@ -46,7 +46,7 @@ module.exports = {
     if (!draft) {
       return interaction.reply({
         content: "⏱️ Rapport expiré (15 min). Relance /rapport-jugement.",
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -57,10 +57,10 @@ module.exports = {
       const avocatIds = Array.isArray(draft.avocatIds) ? draft.avocatIds : []; // facultatif
 
       if (jugeIds.length === 0) {
-        return interaction.reply({ content: "❌ Tu dois choisir au moins 1 juge.", ephemeral: true });
+        return interaction.reply({ content: "❌ Tu dois choisir au moins 1 juge.", flags: 64 });
       }
       if (procIds.length === 0) {
-        return interaction.reply({ content: "❌ Tu dois choisir au moins 1 procureur.", ephemeral: true });
+        return interaction.reply({ content: "❌ Tu dois choisir au moins 1 procureur.", flags: 64 });
       }
       // avocatIds peut être vide => OK
 

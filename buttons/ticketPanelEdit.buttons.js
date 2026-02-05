@@ -29,7 +29,7 @@ module.exports = {
     if (cid.startsWith("ticketpanel:edit:back:")) {
       const panelId = cid.split(":")[3];
       const panel = await getPanel(guildId, panelId);
-      if (!panel) return interaction.reply({ content: "❌ Panel introuvable.", ephemeral: true });
+      if (!panel) return interaction.reply({ content: "❌ Panel introuvable.", flags: 64 });
 
       return interaction.update({
         content: "Choisis un champ à modifier.",

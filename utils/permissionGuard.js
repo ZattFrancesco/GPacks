@@ -116,9 +116,9 @@ async function deny(interaction, reason) {
 
   try {
     if (interaction.deferred || interaction.replied) {
-      await interaction.followUp({ content, ephemeral: true });
+      await interaction.followUp({ content, flags: 64 });
     } else {
-      await interaction.reply({ content, ephemeral: true });
+      await interaction.reply({ content, flags: 64 });
     }
   } catch {}
 }

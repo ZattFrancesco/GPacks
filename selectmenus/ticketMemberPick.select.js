@@ -8,7 +8,7 @@ module.exports = {
     const ticketId = parts[2];
     const userId = interaction.values?.[0];
     if (!ticketId || !userId) {
-      return interaction.reply({ content: "❌ Sélection invalide.", ephemeral: true });
+      return interaction.reply({ content: "❌ Sélection invalide.", flags: 64 });
     }
 
     const row = new ActionRowBuilder().addComponents(
@@ -22,6 +22,6 @@ module.exports = {
         .setStyle(ButtonStyle.Danger)
     );
 
-    return interaction.reply({ content: `Que veux-tu faire avec <@${userId}> ?`, components: [row], ephemeral: true });
+    return interaction.reply({ content: `Que veux-tu faire avec <@${userId}> ?`, components: [row], flags: 64 });
   },
 };

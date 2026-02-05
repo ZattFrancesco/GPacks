@@ -29,7 +29,7 @@ module.exports = async (client, interaction) => {
     // Best-effort user feedback (only if still possible).
     try {
       if (interaction.isRepliable?.() && !interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: "Une erreur est survenue sur ce bouton.", ephemeral: true });
+        await interaction.reply({ content: "Une erreur est survenue sur ce bouton.", flags: 64 });
       }
     } catch (_) {}
   }

@@ -16,7 +16,7 @@ function getAllJsFiles(dir) {
   return out;
 }
 
-module.exports = async function registrySync() {
+async function syncRegistryAll() {
   try {
     const commandsRoot = path.join(process.cwd(), "commands");
     const files = getAllJsFiles(commandsRoot);
@@ -42,4 +42,7 @@ module.exports = async function registrySync() {
     // Important : si MySQL est down, on ne casse pas le bot
     logger.warn("Registry DB ignoré (DB pas prête ?) :", err?.message || err);
   }
-};
+}
+
+// Export nommé (utilisé par index.js)
+module.exports = { syncRegistryAll };

@@ -21,12 +21,12 @@ module.exports = {
     const limit = parts[3] || "200";
 
     if (!ownerId || interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
+      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", flags: 64 });
     }
 
     const sess = getSession(interaction.guildId, ownerId, session);
     if (!sess) {
-      return interaction.reply({ content: "⏱️ Session expirée. Relance /rapport-modifier.", ephemeral: true });
+      return interaction.reply({ content: "⏱️ Session expirée. Relance /rapport-modifier.", flags: 64 });
     }
 
     const modal = new ModalBuilder()

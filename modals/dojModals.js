@@ -30,7 +30,7 @@ module.exports = {
     if (prefix !== "doj") return;
 
     if (ownerId && interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Ce formulaire ne t'appartient pas.", ephemeral: true });
+      return interaction.reply({ content: "❌ Ce formulaire ne t'appartient pas.", flags: 64 });
     }
 
     const guildId = interaction.guildId;
@@ -64,7 +64,7 @@ module.exports = {
       setDraft(guildId, userId, draft);
 
       return interaction.reply({
-        ephemeral: true,
+        flags: 64,
         content:
           "✅ Étape 1 enregistrée.\n" +
           "Tu peux activer **Photos manuelles** (ON) si tu veux que le bot poste un rappel sous le dossier.",
@@ -78,7 +78,7 @@ module.exports = {
       const existing = getDraft(guildId, userId);
       if (!existing) {
         return interaction.reply({
-          ephemeral: true,
+          flags: 64,
           content: "⏱️ Ton dossier a expiré (15 min). Relance `/demande-jugement`.",
         });
       }
@@ -87,13 +87,13 @@ module.exports = {
       const updated = updateDraft(guildId, userId, { nbCasiers: nb });
 
       return interaction.reply({
-        ephemeral: true,
+        flags: 64,
         content: "✅ Nombre de casiers mis à jour.",
         embeds: [buildJugementEmbed(updated)],
         components: wizardComponents(userId, updated),
       });
     }
 
-    return interaction.reply({ content: "❌ Modal inconnu.", ephemeral: true });
+    return interaction.reply({ content: "❌ Modal inconnu.", flags: 64 });
   },
 };

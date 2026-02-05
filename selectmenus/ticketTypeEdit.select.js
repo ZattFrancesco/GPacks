@@ -45,14 +45,14 @@ module.exports = {
 
     const type = await getType(guildId, typeId);
     if (!type) {
-      return interaction.reply({ content: "❌ Type introuvable.", ephemeral: true });
+      return interaction.reply({ content: "❌ Type introuvable.", flags: 64 });
     }
 
     // 1) Menu principal : choisir le champ
     if (kind === "field") {
       const choice = interaction.values?.[0];
       if (!choice) {
-        return interaction.reply({ content: "❌ Choix invalide.", ephemeral: true });
+        return interaction.reply({ content: "❌ Choix invalide.", flags: 64 });
       }
 
       // --- label / emoji => modal
@@ -161,7 +161,7 @@ module.exports = {
         );
       }
 
-      return interaction.reply({ content: "❌ Choix non géré.", ephemeral: true });
+      return interaction.reply({ content: "❌ Choix non géré.", flags: 64 });
     }
 
     // 2) Category selection
@@ -191,6 +191,6 @@ module.exports = {
       return interaction.update({ ...view });
     }
 
-    return interaction.reply({ content: "❌ Action inconnue.", ephemeral: true });
+    return interaction.reply({ content: "❌ Action inconnue.", flags: 64 });
   },
 };

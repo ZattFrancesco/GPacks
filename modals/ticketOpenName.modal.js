@@ -30,13 +30,13 @@ module.exports = {
     const guildId = interaction.guildId;
     const draft = getOpenDraft(guildId, interaction.user.id);
     if (!draft) {
-      return interaction.reply({ content: "❌ Demande expirée. Recommence depuis le panel.", ephemeral: true });
+      return interaction.reply({ content: "❌ Demande expirée. Recommence depuis le panel.", flags: 64 });
     }
 
     // IMPORTANT : un modal doit répondre en < 3s.
     // On defer tout de suite pour éviter DiscordAPIError[10062] (Unknown interaction)
     // si la création du salon / requêtes DB prennent trop de temps.
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: 64 });
 
     const prenom = interaction.fields.getTextInputValue("prenom").trim();
     const nom = interaction.fields.getTextInputValue("nom").trim();

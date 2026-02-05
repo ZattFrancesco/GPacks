@@ -102,12 +102,12 @@ module.exports = {
       const targetUserId = parts[4];
 
       if (!subAction || !realTicketId || !targetUserId) {
-        return interaction.reply({ content: "❌ Action membre invalide.", ephemeral: true });
+        return interaction.reply({ content: "❌ Action membre invalide.", flags: 64 });
       }
 
       const ticket = await getTicketById(guildId, realTicketId);
       if (!ticket) {
-        return interaction.reply({ content: "❌ Ticket introuvable (DB).", ephemeral: true });
+        return interaction.reply({ content: "❌ Ticket introuvable (DB).", flags: 64 });
       }
 
       const type = await getType(guildId, ticket.type_id);
@@ -115,7 +115,7 @@ module.exports = {
       const staffRoleIds = type?.staff_role_ids || JSON.parse(type?.staff_role_ids_json || "[]");
 
       if (!isStaff(interaction.member, staffRoleIds)) {
-        return interaction.reply({ content: "❌ Réservé au staff.", ephemeral: true });
+        return interaction.reply({ content: "❌ Réservé au staff.", flags: 64 });
       }
 
       try {
@@ -125,7 +125,7 @@ module.exports = {
             SendMessages: true,
             ReadMessageHistory: true,
           });
-          return interaction.reply({ content: `✅ <@${targetUserId}> ajouté au ticket.`, ephemeral: true });
+          return interaction.reply({ content: `✅ <@${targetUserId}> ajouté au ticket.`, flags: 64 });
         }
 
         if (subAction === "remove") {
@@ -133,19 +133,19 @@ module.exports = {
           await channel.permissionOverwrites.edit(targetUserId, {
             ViewChannel: false,
           });
-          return interaction.reply({ content: `✅ <@${targetUserId}> retiré du ticket.`, ephemeral: true });
+          return interaction.reply({ content: `✅ <@${targetUserId}> retiré du ticket.`, flags: 64 });
         }
 
-        return interaction.reply({ content: "❌ Sous-action inconnue.", ephemeral: true });
+        return interaction.reply({ content: "❌ Sous-action inconnue.", flags: 64 });
       } catch {
-        return interaction.reply({ content: "❌ Impossible de modifier les permissions (vérifie les perms du bot).", ephemeral: true });
+        return interaction.reply({ content: "❌ Impossible de modifier les permissions (vérifie les perms du bot).", flags: 64 });
       }
     }
 
     // --- Helper charge ticket (cas standard: ticket:<action>:<ticketId>) ---
     const ticket = ticketId ? await getTicketById(guildId, ticketId) : null;
     if (ticketId && !ticket) {
-      return interaction.reply({ content: "❌ Ticket introuvable (DB).", ephemeral: true });
+      return interaction.reply({ content: "❌ Ticket introuvable (DB).", flags: 64 });
     }
 
     const type = ticket ? await getType(guildId, ticket.type_id) : null;
@@ -167,13 +167,13 @@ module.exports = {
     ].includes(action);
 
     if (needStaff && !isStaff(interaction.member, staffRoleIds)) {
-      return interaction.reply({ content: "❌ Réservé au staff.", ephemeral: true });
+      return interaction.reply({ content: "❌ Réservé au staff.", flags: 64 });
     }
 
     // ---------------- CLOSE (demande confirmation au créateur) ----------------
     if (action === "close") {
       if (ticket.status === "closed") {
-        return interaction.reply({ content: "ℹ️ Déjà fermé.", ephemeral: true });
+        return interaction.reply({ content: "ℹ️ Déjà fermé.", flags: 64 });
       }
 
       // Anti-spam : si une confirmation est déjà en attente, on évite d'en envoyer une nouvelle.
@@ -182,7 +182,7 @@ module.exports = {
           await channel.messages.fetch(String(ticket.pending_close_message_id));
           return interaction.reply({
             content: "ℹ️ Une demande de confirmation est déjà en attente dans ce ticket.",
-            ephemeral: true,
+            flags: 64,
           });
         } catch {
           // Le message n'existe plus -> on nettoie et on continue.
@@ -232,12 +232,12 @@ module.exports = {
         meta: { ticketId: ticket.ticket_id, ticketChannelId: channel.id, authorUserId: ticket.author_user_id, requestedBy: interaction.user.id },
       });
 
-      return interaction.reply({ content: "✅ Demande de confirmation envoyée au créateur.", ephemeral: true });
+      return interaction.reply({ content: "✅ Demande de confirmation envoyée au créateur.", flags: 64 });
     }
 
     if (action === "closeconfirm") {
       if (interaction.user.id !== ticket.author_user_id) {
-        return interaction.reply({ content: "❌ Seul le créateur peut confirmer.", ephemeral: true });
+        return interaction.reply({ content: "❌ Seul le créateur peut confirmer.", flags: 64 });
       }
 
       try {
@@ -275,12 +275,12 @@ module.exports = {
         });
       } catch {}
 
-      return interaction.reply({ content: "✅ Ticket fermé.", ephemeral: true });
+      return interaction.reply({ content: "✅ Ticket fermé.", flags: 64 });
     }
 
     if (action === "closecancel") {
       if (interaction.user.id !== ticket.author_user_id) {
-        return interaction.reply({ content: "❌ Seul le créateur peut annuler.", ephemeral: true });
+        return interaction.reply({ content: "❌ Seul le créateur peut annuler.", flags: 64 });
       }
 
       // On supprime le message de confirmation si on garde le ticket ouvert
@@ -292,13 +292,13 @@ module.exports = {
         } catch {}
       }
       try { await clearPendingCloseMessage(guildId, ticket.ticket_id); } catch {}
-      return interaction.reply({ content: "✅ Ticket gardé ouvert.", ephemeral: true });
+      return interaction.reply({ content: "✅ Ticket gardé ouvert.", flags: 64 });
     }
 
     // ---------------- REOPEN ----------------
     if (action === "reopen") {
       if (ticket.status !== "closed") {
-        return interaction.reply({ content: "❌ Ce ticket n'est pas fermé.", ephemeral: true });
+        return interaction.reply({ content: "❌ Ce ticket n'est pas fermé.", flags: 64 });
       }
 
       try {
@@ -327,7 +327,7 @@ module.exports = {
         }
       } catch {}
 
-      return interaction.reply({ content: "✅ Ticket ré-ouvert.", ephemeral: true });
+      return interaction.reply({ content: "✅ Ticket ré-ouvert.", flags: 64 });
     }
 
     // ---------------- RENAME ----------------
@@ -360,7 +360,7 @@ module.exports = {
       return interaction.reply({
         content: "Choisis un membre, puis tu pourras l'ajouter ou le retirer.",
         components: [row],
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -380,7 +380,7 @@ module.exports = {
       return interaction.reply({
         content: "Avant de supprimer : tu veux envoyer un MP au créateur ?",
         components: [row],
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -403,7 +403,7 @@ module.exports = {
 
     if (action === "delete_nom") {
       // Pas de message, on supprime direct
-      await interaction.reply({ content: "✅ Suppression en cours...", ephemeral: true });
+      await interaction.reply({ content: "✅ Suppression en cours...", flags: 64 });
       return deleteTicketNow({ interaction, client, ticket, type, panel, dmMessage: null });
     }
 
@@ -446,7 +446,7 @@ async function deleteTicketNow({ interaction, client, ticket, type, panel, dmMes
     await channel.delete(`Ticket deleted #${ticket.ticket_id}`);
   } catch {
     try {
-      await interaction.followUp({ content: "⚠️ Je n'ai pas pu supprimer le salon (permissions ?).", ephemeral: true });
+      await interaction.followUp({ content: "⚠️ Je n'ai pas pu supprimer le salon (permissions ?).", flags: 64 });
     } catch {}
   }
 }

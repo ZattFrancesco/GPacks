@@ -22,7 +22,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!isOwner(interaction.user.id)) {
-      return interaction.reply({ content: "❌ Réservé au développeur du bot.", ephemeral: true });
+      return interaction.reply({ content: "❌ Réservé au développeur du bot.", flags: 64 });
     }
 
     const sub = interaction.options.getSubcommand(true);
@@ -80,7 +80,7 @@ module.exports = {
       const rows = await listBlacklisted(25);
 
       if (!rows.length) {
-        return interaction.reply({ content: "✅ Aucune personne n'est blacklistée.", ephemeral: true });
+        return interaction.reply({ content: "✅ Aucune personne n'est blacklistée.", flags: 64 });
       }
 
       const lines = rows.map((r, i) => {
@@ -93,7 +93,7 @@ module.exports = {
         .setDescription(lines.join("\n").slice(0, 4000))
         .setFooter({ text: `Total affiché: ${rows.length} (max 25)` });
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.reply({ embeds: [embed], flags: 64 });
     }
   },
 };

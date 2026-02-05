@@ -47,24 +47,24 @@ async function openTicketFromPanel(interaction, { panelId, typeId }) {
 
   // Role requis
   if (panel.required_role_id && !member.roles?.cache?.has(panel.required_role_id)) {
-    return interaction.reply({ content: "❌ Tu n'as pas le rôle requis pour ouvrir un ticket.", ephemeral: true });
+    return interaction.reply({ content: "❌ Tu n'as pas le rôle requis pour ouvrir un ticket.", flags: 64 });
   }
 
     // Blacklist
   const bl = await isBlacklisted(interaction.user.id);
   if (bl?.blacklisted) {
     const reason = bl.reason ? `\nRaison: **${bl.reason}**` : "";
-    return interaction.reply({ content: `❌ Tu es blacklisté, tu ne peux pas ouvrir de ticket.${reason}`, ephemeral: true });
+    return interaction.reply({ content: `❌ Tu es blacklisté, tu ne peux pas ouvrir de ticket.${reason}`, flags: 64 });
   }
 
 // Type autorisé
   const typeIds = panel.type_ids || JSON.parse(panel.type_ids_json || "[]");
   if (!typeIds.includes(typeId)) {
-    return interaction.reply({ content: "❌ Ce type n'est pas autorisé sur ce panel.", ephemeral: true });
+    return interaction.reply({ content: "❌ Ce type n'est pas autorisé sur ce panel.", flags: 64 });
   }
 
   const type = await getType(guildId, typeId);
-  if (!type) return interaction.reply({ content: "❌ Type introuvable.", ephemeral: true });
+  if (!type) return interaction.reply({ content: "❌ Type introuvable.", flags: 64 });
 
   // Si namemodalrename : modal avant
   if (type.namemodalrename) {
@@ -206,9 +206,9 @@ const categoryId = type.category_opened_id || null;
       // Cas typique: ModalSubmitInteraction.deferReply(...) puis traitement long
       await interaction.editReply({ content: `✅ Ticket créé : <#${channel.id}>` });
     } else if (interaction.replied) {
-      await interaction.followUp({ content: `✅ Ticket créé : <#${channel.id}>`, ephemeral: true });
+      await interaction.followUp({ content: `✅ Ticket créé : <#${channel.id}>`, flags: 64 });
     } else {
-      await interaction.reply({ content: `✅ Ticket créé : <#${channel.id}>`, ephemeral: true });
+      await interaction.reply({ content: `✅ Ticket créé : <#${channel.id}>`, flags: 64 });
     }
   } catch {
     // best effort (évite crash si token expiré)

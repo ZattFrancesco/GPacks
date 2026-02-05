@@ -34,7 +34,7 @@ module.exports = {
     const settings = await pointeuseDb.getSettings(interaction.guildId);
     const duration = parseDurationFromModal(interaction);
     if (!duration) {
-      return interaction.reply({ content: "❌ Durée invalide (heures + minutes 0-59).", ephemeral: true });
+      return interaction.reply({ content: "❌ Durée invalide (heures + minutes 0-59).", flags: 64 });
     }
 
     // Cooldown 10 minutes (bypass staff/admin)
@@ -45,7 +45,7 @@ module.exports = {
         const min = Math.ceil(cd.remainingSec / 60);
         return interaction.reply({
           content: `❌ Attends encore environ **${min} min** avant de repointer.`,
-          ephemeral: true,
+          flags: 64,
         });
       }
     }
@@ -71,7 +71,7 @@ module.exports = {
 
     return interaction.reply({
       content: `✅ Pointage ajouté: **${duration.hours}h ${duration.minutes}m** (semaine **${weekId}**).`,
-      ephemeral: true,
+      flags: 64,
     });
   },
 };

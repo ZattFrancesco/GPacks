@@ -47,7 +47,7 @@ module.exports = {
     const field = parts[4];
 
     const panel = await getPanel(guildId, panelId);
-    if (!panel) return interaction.reply({ content: "❌ Panel introuvable.", ephemeral: true });
+    if (!panel) return interaction.reply({ content: "❌ Panel introuvable.", flags: 64 });
 
     const value = interaction.fields.getTextInputValue("value")?.trim() || "";
 
@@ -61,6 +61,6 @@ module.exports = {
     await updatePanel(guildId, panelId, patch);
     await refreshPanelMessage(interaction, panelId);
 
-    return interaction.reply({ content: "✅ Panel mis à jour.", ephemeral: true });
+    return interaction.reply({ content: "✅ Panel mis à jour.", flags: 64 });
   },
 };

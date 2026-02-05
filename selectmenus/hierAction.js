@@ -55,7 +55,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!isOwner(interaction.user.id)) {
-      return interaction.reply({ content: "❌ Réservé à l’owner.", ephemeral: true });
+      return interaction.reply({ content: "❌ Réservé à l’owner.", flags: 64 });
     }
 
     const action = interaction.values?.[0];
@@ -94,7 +94,7 @@ module.exports = {
       return interaction.reply({
         content: "Choisis le palier à modifier :",
         components: [tiersSelect(tiers, "hier:pick_tier_edit", "Choisir un palier")],
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -103,7 +103,7 @@ module.exports = {
       return interaction.reply({
         content: "Choisis le palier à supprimer :",
         components: [tiersSelect(tiers, "hier:pick_tier_delete", "Choisir un palier")],
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -112,7 +112,7 @@ module.exports = {
       return interaction.reply({
         content: "Choisis le palier à déplacer :",
         components: [tiersSelect(tiers, "hier:pick_tier_move", "Choisir un palier")],
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -121,7 +121,7 @@ module.exports = {
       return interaction.reply({
         content: "Choisis le palier auquel tu veux définir les rôles :",
         components: [tiersSelect(tiers, "hier:pick_tier_roles", "Choisir un palier")],
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -171,7 +171,7 @@ module.exports = {
       return interaction.reply({
         content: "Choisis le salon où le bot publie l’embed hiérarchie :",
         components: [new ActionRowBuilder().addComponents(channelMenu)],
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -180,14 +180,14 @@ module.exports = {
       // On déclenche la même logique que /hiérarchie publish, mais depuis le panel
       const settings = (await db.getSettings(guildId)) || {};
       if (!settings.channel_id) {
-        return interaction.reply({ content: "❌ Aucun salon configuré (action 'Choisir le salon').", ephemeral: true });
+        return interaction.reply({ content: "❌ Aucun salon configuré (action 'Choisir le salon').", flags: 64 });
       }
 
       const fullTiers = await db.getTierRoles(guildId);
       const embed = buildHierarchyEmbed({ guild: interaction.guild, settings, tiers: fullTiers });
 
       const channel = await interaction.guild.channels.fetch(settings.channel_id).catch(() => null);
-      if (!channel) return interaction.reply({ content: "❌ Salon introuvable.", ephemeral: true });
+      if (!channel) return interaction.reply({ content: "❌ Salon introuvable.", flags: 64 });
 
       let msg = null;
       if (settings.message_id) msg = await channel.messages.fetch(settings.message_id).catch(() => null);
@@ -199,7 +199,7 @@ module.exports = {
         await db.upsertSettings(guildId, { message_id: sent.id });
       }
 
-      return interaction.reply({ content: "✅ Publié / mis à jour.", ephemeral: true });
+      return interaction.reply({ content: "✅ Publié / mis à jour.", flags: 64 });
     }
 
     // fallback

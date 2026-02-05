@@ -18,7 +18,7 @@ module.exports = [
     id: "pointeuse:setup:panel_ch",
     async execute(interaction) {
       if (!adminOnly(interaction)) {
-        return interaction.reply({ content: "❌ Admin uniquement.", ephemeral: true });
+        return interaction.reply({ content: "❌ Admin uniquement.", flags: 64 });
       }
       const channelId = interaction.values?.[0] || null;
       await pointeuseDb.setPanelChannel(interaction.guildId, channelId);
@@ -29,7 +29,7 @@ module.exports = [
     id: "pointeuse:setup:recap_ch",
     async execute(interaction) {
       if (!adminOnly(interaction)) {
-        return interaction.reply({ content: "❌ Admin uniquement.", ephemeral: true });
+        return interaction.reply({ content: "❌ Admin uniquement.", flags: 64 });
       }
       const channelId = interaction.values?.[0] || null;
       await pointeuseDb.setRecapChannel(interaction.guildId, channelId);
@@ -40,7 +40,7 @@ module.exports = [
     id: "pointeuse:setup:logs_ch",
     async execute(interaction) {
       if (!adminOnly(interaction)) {
-        return interaction.reply({ content: "❌ Admin uniquement.", ephemeral: true });
+        return interaction.reply({ content: "❌ Admin uniquement.", flags: 64 });
       }
       const channelId = interaction.values?.[0] || null;
       await pointeuseDb.setLogsChannel(interaction.guildId, channelId);
@@ -51,7 +51,7 @@ module.exports = [
     id: "pointeuse:setup:staff_roles",
     async execute(interaction) {
       if (!adminOnly(interaction)) {
-        return interaction.reply({ content: "❌ Admin uniquement.", ephemeral: true });
+        return interaction.reply({ content: "❌ Admin uniquement.", flags: 64 });
       }
       const roleIds = Array.isArray(interaction.values) ? interaction.values : [];
       await pointeuseDb.setStaffRoles(interaction.guildId, roleIds);

@@ -230,7 +230,6 @@ async function insertEntry(guildId, data) {
   );
 
   return res?.insertId;
-  return res.insertId;
 
 }
 

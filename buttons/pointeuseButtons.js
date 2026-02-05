@@ -43,7 +43,7 @@ function buildClockModal() {
 
 async function handleSetupPublish(interaction, kind) {
   if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-    return interaction.reply({ content: "❌ Admin uniquement.", ephemeral: true });
+    return interaction.reply({ content: "❌ Admin uniquement.", flags: 64 });
   }
 
   await pointeuseDb.ensureSettingsRow(interaction.guildId);
@@ -52,7 +52,7 @@ async function handleSetupPublish(interaction, kind) {
     if (kind === "panel") res = await publishOrUpdatePanel(interaction.client, interaction.guildId);
     else res = await publishOrUpdateRecap(interaction.client, interaction.guildId);
   } catch (err) {
-    return interaction.reply({ content: `❌ ${err?.message || "Erreur"}`, ephemeral: true });
+    return interaction.reply({ content: `❌ ${err?.message || "Erreur"}`, flags: 64 });
   }
 
   const settings = await pointeuseDb.getSettings(interaction.guildId);
@@ -61,7 +61,7 @@ async function handleSetupPublish(interaction, kind) {
   await interaction.update({ ...payload });
   return interaction.followUp({
     content: `✅ ${kind === "panel" ? "Panel" : "Recap"} publié${res.updated ? " (mis à jour)" : ""}.`,
-    ephemeral: true,
+    flags: 64,
   });
 }
 
@@ -91,7 +91,7 @@ module.exports = [
     id: "pointeuse:setup:close",
     async execute(interaction) {
       if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: "❌ Admin uniquement.", ephemeral: true });
+        return interaction.reply({ content: "❌ Admin uniquement.", flags: 64 });
       }
       return interaction.update({ content: "✅ Dashboard fermé.", embeds: [], components: [] });
     },
@@ -124,7 +124,7 @@ module.exports = [
       await pointeuseDb.ensureTables();
       const settings = await pointeuseDb.getSettings(interaction.guildId);
       if (!isStaff(interaction.member, settings)) {
-        return interaction.reply({ content: "❌ Staff uniquement.", ephemeral: true });
+        return interaction.reply({ content: "❌ Staff uniquement.", flags: 64 });
       }
 
       const parts = String(interaction.customId).split(":");
@@ -134,7 +134,7 @@ module.exports = [
       if (displayedWeek !== activeWeek) {
         return interaction.reply({
           content: `❌ Tu ne peux reset que la semaine active (**${activeWeek}**).`,
-          ephemeral: true,
+          flags: 64,
         });
       }
 
@@ -148,7 +148,7 @@ module.exports = [
         buildResetLog({ fromWeekId: activeWeek, toWeekId: nextWeek, staffId: interaction.user.id })
       );
 
-      return interaction.reply({ content: `✅ Semaine reset → **${nextWeek}**`, ephemeral: true });
+      return interaction.reply({ content: `✅ Semaine reset → **${nextWeek}**`, flags: 64 });
     },
   },
 ];

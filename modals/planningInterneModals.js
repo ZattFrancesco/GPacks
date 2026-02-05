@@ -108,10 +108,10 @@ module.exports = {
         const day = safeVal(interaction, "day");
         const hour = safeVal(interaction, "hour");
         const dt = toMysqlDatetimeFromParts({ year, month, day, hour });
-        if (!dt) return interaction.reply({ content: "❌ Date/heure invalide.", ephemeral: true });
+        if (!dt) return interaction.reply({ content: "❌ Date/heure invalide.", flags: 64 });
 
         const reason = String(safeVal(interaction, "reason") || "").trim();
-        if (!reason) return interaction.reply({ content: "❌ Raison vide.", ephemeral: true });
+        if (!reason) return interaction.reply({ content: "❌ Raison vide.", flags: 64 });
 
         const entryId = await insertEntry({
           guildId,
@@ -134,14 +134,14 @@ module.exports = {
 
         await refreshPlanningMessage(interaction, guildId);
         clearDraft(guildId, userId);
-        return interaction.reply({ content: "✅ Ajouté.", ephemeral: true });
+        return interaction.reply({ content: "✅ Ajouté.", flags: 64 });
       }
 
 
       if (type === "APPOINTMENT_NAME") {
         const lastname = String(safeVal(interaction, "lastname") || "").trim();
         const firstname = String(safeVal(interaction, "firstname") || "").trim();
-        if (!lastname || !firstname) return interaction.reply({ content: "❌ Nom / prénom manquant.", ephemeral: true });
+        if (!lastname || !firstname) return interaction.reply({ content: "❌ Nom / prénom manquant.", flags: 64 });
 
         // IMPORTANT: Discord n'autorise pas de chaîner un modal depuis un ModalSubmit.
         // On stocke l'identité, puis on propose un bouton pour ouvrir le 2e modal (date/heure).
@@ -158,14 +158,14 @@ module.exports = {
         return interaction.reply({
           content: "✅ Nom enregistré. Clique pour renseigner la **date & l'heure** :",
           components: [row],
-          ephemeral: true,
+          flags: 64,
         });
       }
 
       if (type === "APPOINTMENT_DATE") {
         const draft = getDraft(guildId, userId);
         if (!draft || draft.mode !== "add" || draft.type !== "APPOINTMENT") {
-          return interaction.reply({ content: "❌ Brouillon manquant. Recommence avec ➕ Ajouter.", ephemeral: true });
+          return interaction.reply({ content: "❌ Brouillon manquant. Recommence avec ➕ Ajouter.", flags: 64 });
         }
 
         const year = safeVal(interaction, "year");
@@ -174,7 +174,7 @@ module.exports = {
         const hour = safeVal(interaction, "hour");
 
         const dt = toMysqlDatetimeFromParts({ year, month, day, hour });
-        if (!dt) return interaction.reply({ content: "❌ Date/heure invalide.", ephemeral: true });
+        if (!dt) return interaction.reply({ content: "❌ Date/heure invalide.", flags: 64 });
 
         setDraft(guildId, userId, { ...draft, eventDatetime: dt });
 
@@ -189,7 +189,7 @@ module.exports = {
         return interaction.reply({
           content: "Maintenant sélectionne les **personnes concernées** (optionnel) :",
           components: [row],
-          ephemeral: true,
+          flags: 64,
         });
       }
 
@@ -201,7 +201,7 @@ module.exports = {
       const hour = safeVal(interaction, "hour");
 
       const dt = toMysqlDatetimeFromParts({ year, month, day, hour });
-      if (!dt) return interaction.reply({ content: "❌ Date/heure invalide.", ephemeral: true });
+      if (!dt) return interaction.reply({ content: "❌ Date/heure invalide.", flags: 64 });
 
       if (type === "TRAINING") {
         const entryId = await insertEntry({
@@ -224,12 +224,12 @@ module.exports = {
 
         await refreshPlanningMessage(interaction, guildId);
         clearDraft(guildId, userId);
-        return interaction.reply({ content: "✅ Ajouté.", ephemeral: true });
+        return interaction.reply({ content: "✅ Ajouté.", flags: 64 });
       }
 
       if (type === "MEETING") {
         const motif = String(safeVal(interaction, "motif") || "").trim();
-        if (!motif) return interaction.reply({ content: "❌ Motif manquant.", ephemeral: true });
+        if (!motif) return interaction.reply({ content: "❌ Motif manquant.", flags: 64 });
 
         setDraft(guildId, userId, { mode: "add", type: "MEETING", week, eventDatetime: dt, motif });
 
@@ -244,11 +244,11 @@ module.exports = {
         return interaction.reply({
           content: "Maintenant sélectionne les **rôles concernés** (optionnel) :",
           components: [row],
-          ephemeral: true,
+          flags: 64,
         });
       }
 
-      return interaction.reply({ content: "❌ Type inconnu.", ephemeral: true });
+      return interaction.reply({ content: "❌ Type inconnu.", flags: 64 });
     }
 
     // ---------- EDIT ----------
@@ -256,7 +256,7 @@ module.exports = {
       const idEntry = parts[3];
 
       const existing = await getEntryById(guildId, idEntry);
-      if (!existing) return interaction.reply({ content: "❌ Entrée introuvable.", ephemeral: true });
+      if (!existing) return interaction.reply({ content: "❌ Entrée introuvable.", flags: 64 });
 
       if (type === "OTHER") {
         const year = safeVal(interaction, "year");
@@ -264,15 +264,15 @@ module.exports = {
         const day = safeVal(interaction, "day");
         const hour = safeVal(interaction, "hour");
         const dt = toMysqlDatetimeFromParts({ year, month, day, hour });
-        if (!dt) return interaction.reply({ content: "❌ Date/heure invalide.", ephemeral: true });
+        if (!dt) return interaction.reply({ content: "❌ Date/heure invalide.", flags: 64 });
 
         const reason = String(safeVal(interaction, "reason") || "").trim();
-        if (!reason) return interaction.reply({ content: "❌ Raison vide.", ephemeral: true });
+        if (!reason) return interaction.reply({ content: "❌ Raison vide.", flags: 64 });
 
         await updateEntry(guildId, idEntry, { eventDatetime: dt, otherReason: reason });
         await refreshPlanningMessage(interaction, guildId);
         clearDraft(guildId, userId);
-        return interaction.reply({ content: "✅ Modifié.", ephemeral: true });
+        return interaction.reply({ content: "✅ Modifié.", flags: 64 });
       }
 
       if (type === "APPOINTMENT") {
@@ -281,11 +281,11 @@ module.exports = {
         const hourStr = String(safeVal(interaction, "hour") || "").trim();
         const lastname = String(safeVal(interaction, "lastname") || "").trim();
         const firstname = String(safeVal(interaction, "firstname") || "").trim();
-        if (!lastname || !firstname) return interaction.reply({ content: "❌ Nom / prénom manquant.", ephemeral: true });
+        if (!lastname || !firstname) return interaction.reply({ content: "❌ Nom / prénom manquant.", flags: 64 });
 
         const p = parseDateFR(dateStr);
         const dt = p ? toMysqlDatetimeFromParts({ year: p.year, month: p.month, day: p.day, hour: hourStr }) : null;
-        if (!dt) return interaction.reply({ content: "❌ Date/heure invalide.", ephemeral: true });
+        if (!dt) return interaction.reply({ content: "❌ Date/heure invalide.", flags: 64 });
 
         setDraft(guildId, userId, { mode: "edit", type: "APPOINTMENT", idEntry, eventDatetime: dt, lastname, firstname });
 
@@ -300,7 +300,7 @@ module.exports = {
         return interaction.reply({
           content: "Maintenant sélectionne les **personnes concernées** (optionnel) :",
           components: [row],
-          ephemeral: true,
+          flags: 64,
         });
       }
 
@@ -312,19 +312,19 @@ module.exports = {
       const hour = safeVal(interaction, "hour");
 
       const dt = toMysqlDatetimeFromParts({ year, month, day, hour });
-      if (!dt) return interaction.reply({ content: "❌ Date/heure invalide.", ephemeral: true });
+      if (!dt) return interaction.reply({ content: "❌ Date/heure invalide.", flags: 64 });
 
       if (type === "TRAINING") {
         await updateEntry(guildId, idEntry, { eventDatetime: dt });
 
         await refreshPlanningMessage(interaction, guildId);
         clearDraft(guildId, userId);
-        return interaction.reply({ content: "✅ Modifié.", ephemeral: true });
+        return interaction.reply({ content: "✅ Modifié.", flags: 64 });
       }
 
       if (type === "MEETING") {
         const motif = String(safeVal(interaction, "motif") || "").trim();
-        if (!motif) return interaction.reply({ content: "❌ Motif manquant.", ephemeral: true });
+        if (!motif) return interaction.reply({ content: "❌ Motif manquant.", flags: 64 });
 
         setDraft(guildId, userId, { mode: "edit", type: "MEETING", idEntry, eventDatetime: dt, motif });
 
@@ -339,11 +339,11 @@ module.exports = {
         return interaction.reply({
           content: "Sélectionne les **rôles concernés** (optionnel) :",
           components: [row],
-          ephemeral: true,
+          flags: 64,
         });
       }
 
-      return interaction.reply({ content: "❌ Type inconnu.", ephemeral: true });
+      return interaction.reply({ content: "❌ Type inconnu.", flags: 64 });
     }
 
   },

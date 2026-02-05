@@ -139,17 +139,17 @@ module.exports = {
     const limitRaw = Number(parts[3]);
 
     if (!ownerId || interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
+      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", flags: 64 });
     }
 
     const sess = getSession(interaction.guildId, ownerId, session);
     if (!sess) {
-      return interaction.reply({ content: "⏱️ Session expirée (15 min). Relance /rapport-modifier.", ephemeral: true });
+      return interaction.reply({ content: "⏱️ Session expirée (15 min). Relance /rapport-modifier.", flags: 64 });
     }
 
     const q = (interaction.fields.getTextInputValue("query") || "").trim();
     if (!q) {
-      return interaction.reply({ content: "❌ Tu dois taper un nom.", ephemeral: true });
+      return interaction.reply({ content: "❌ Tu dois taper un nom.", flags: 64 });
     }
 
     const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 200;
@@ -168,6 +168,6 @@ module.exports = {
     const embed = buildEmbed(q, total, cappedTotal, page, pages, rows, offset);
     const components = buildEditComponents(ownerId, session, page, pages, limit, rows);
 
-    return interaction.reply({ embeds: [embed], components, ephemeral: true });
+    return interaction.reply({ embeds: [embed], components, flags: 64 });
   },
 };

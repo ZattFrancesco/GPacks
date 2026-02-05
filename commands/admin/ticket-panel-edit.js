@@ -31,7 +31,7 @@ module.exports = {
     const panelId = interaction.options.getString("id", true);
 
     const panel = await getPanel(guildId, panelId);
-    if (!panel) return interaction.reply({ content: "❌ Panel introuvable.", ephemeral: true });
+    if (!panel) return interaction.reply({ content: "❌ Panel introuvable.", flags: 64 });
 
     const embed = new EmbedBuilder()
       .setTitle(`🛠️ Édition du panel: ${panel.id}`)
@@ -43,7 +43,7 @@ module.exports = {
       );
 
     return interaction.reply({
-      ephemeral: true,
+      flags: 64,
       embeds: [embed],
       components: [buildEditMenu(panel.id)],
     });

@@ -33,17 +33,17 @@ module.exports = {
     const field = parts[3];
 
     if (interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Pas à toi.", ephemeral: true });
+      return interaction.reply({ content: "❌ Pas à toi.", flags: 64 });
     }
 
     const row = await getVisaById(interaction.guildId, visaId);
-    if (!row) return interaction.reply({ content: "❌ Visa introuvable.", ephemeral: true });
+    if (!row) return interaction.reply({ content: "❌ Visa introuvable.", flags: 64 });
 
     const can = interaction.user.id === row.reporter_user_id || isManager(interaction);
-    if (!can) return interaction.reply({ content: "❌ Tu n'as pas la permission.", ephemeral: true });
+    if (!can) return interaction.reply({ content: "❌ Tu n'as pas la permission.", flags: 64 });
 
     const value = pickValue(interaction);
-    if (!value) return interaction.reply({ content: "❌ Valeur invalide.", ephemeral: true });
+    if (!value) return interaction.reply({ content: "❌ Valeur invalide.", flags: 64 });
 
     if (field === "statut") {
       const normalized = statutLabel(value);
@@ -88,7 +88,7 @@ module.exports = {
 
       const fresh = await getVisaById(interaction.guildId, visaId);
       await refreshVisaMessage(interaction, fresh);
-      return interaction.reply({ content: "✅ Statut mis à jour.", ephemeral: true });
+      return interaction.reply({ content: "✅ Statut mis à jour.", flags: 64 });
     }
 
     if (field === "facture") {
@@ -98,9 +98,9 @@ module.exports = {
       await updateVisa(visaId, { facture_statut: store });
       const fresh = await getVisaById(interaction.guildId, visaId);
       await refreshVisaMessage(interaction, fresh);
-      return interaction.reply({ content: "✅ Facture mise à jour.", ephemeral: true });
+      return interaction.reply({ content: "✅ Facture mise à jour.", flags: 64 });
     }
 
-    return interaction.reply({ content: "❌ Champ inconnu.", ephemeral: true });
+    return interaction.reply({ content: "❌ Champ inconnu.", flags: 64 });
   },
 };

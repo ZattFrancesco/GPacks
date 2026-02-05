@@ -10,6 +10,6 @@ module.exports = {
 
   async execute(interaction) {
     await deleteType(interaction.guildId, interaction.options.getString("id", true));
-    return interaction.reply({ content: "✅ Type supprimé.", ephemeral: true });
+    return interaction.reply({ content: "✅ Type supprimé.", flags: 64 });
   },
 };

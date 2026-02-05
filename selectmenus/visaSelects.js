@@ -21,20 +21,20 @@ module.exports = {
     const field = parts[3];
 
     if (mode !== "draft") {
-      return interaction.reply({ content: "❌ Sélecteur inconnu.", ephemeral: true });
+      return interaction.reply({ content: "❌ Sélecteur inconnu.", flags: 64 });
     }
 
     if (interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Pas ton visa.", ephemeral: true });
+      return interaction.reply({ content: "❌ Pas ton visa.", flags: 64 });
     }
 
     const draft = getVisaDraft(interaction.guildId, ownerId);
     if (!draft) {
-      return interaction.reply({ content: "⏱️ Brouillon expiré (15 min). Relance /visa-creation.", ephemeral: true });
+      return interaction.reply({ content: "⏱️ Brouillon expiré (15 min). Relance /visa-creation.", flags: 64 });
     }
 
     const value = pickValue(interaction);
-    if (!value) return interaction.reply({ content: "❌ Valeur invalide.", ephemeral: true });
+    if (!value) return interaction.reply({ content: "❌ Valeur invalide.", flags: 64 });
 
     if (field === "statut") {
       updateVisaDraft(interaction.guildId, ownerId, { statutVisa: value });
@@ -108,6 +108,6 @@ module.exports = {
       return interaction.update({ embeds: [embed] });
     }
 
-    return interaction.reply({ content: "❌ Champ inconnu.", ephemeral: true });
+    return interaction.reply({ content: "❌ Champ inconnu.", flags: 64 });
   },
 };

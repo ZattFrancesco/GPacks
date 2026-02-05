@@ -29,6 +29,6 @@ module.exports = {
       pageSize: 4,
     });
 
-    return interaction.reply({ embeds: [embed], components, ephemeral: true });
+    return interaction.reply({ embeds: [embed], components, flags: 64 });
   },
 };

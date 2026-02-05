@@ -184,17 +184,17 @@ module.exports = {
     const limit = Number(parts[6] || 200);
 
     if (!ownerId || interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
+      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", flags: 64 });
     }
 
     const sess = getSession(interaction.guildId, ownerId, session);
     if (!sess || !sess.search) {
-      return interaction.reply({ content: "⏱️ Session expirée. Relance /rapport-modifier.", ephemeral: true });
+      return interaction.reply({ content: "⏱️ Session expirée. Relance /rapport-modifier.", flags: 64 });
     }
 
     const raw = (interaction.fields.getTextInputValue("value") || "").trim();
     if (!raw) {
-      return interaction.reply({ content: "❌ Valeur vide.", ephemeral: true });
+      return interaction.reply({ content: "❌ Valeur vide.", flags: 64 });
     }
 
     const patch = {};
@@ -203,14 +203,14 @@ module.exports = {
       if (!unix) {
         return interaction.reply({
           content: "❌ Date invalide. Utilise JJ/MM/AAAA, AAAA-MM-JJ, ou un unix timestamp.",
-          ephemeral: true,
+          flags: 64,
         });
       }
       patch.date_jugement_unix = unix;
     } else if (fieldKey === "tig") {
       const s = raw.toLowerCase();
       if (!["oui", "non", "1", "0", "true", "false"].includes(s)) {
-        return interaction.reply({ content: "❌ TIG: tape Oui ou Non.", ephemeral: true });
+        return interaction.reply({ content: "❌ TIG: tape Oui ou Non.", flags: 64 });
       }
       patch.tig = s === "oui" || s === "1" || s === "true";
     } else {
@@ -256,7 +256,7 @@ module.exports = {
     const label = FIELD_LABELS[fieldKey] || fieldKey;
     return interaction.reply({
       content: `✅ Rapport **#${reportId}** mis à jour : **${label}**.`,
-      ephemeral: true,
+      flags: 64,
     });
   },
 };

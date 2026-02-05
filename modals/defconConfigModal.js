@@ -8,7 +8,7 @@ module.exports = {
   async execute(interaction) {
     const level = Number(String(interaction.customId).split(":")[1]);
     if (![1, 2, 3, 4, 5].includes(level)) {
-      return interaction.reply({ content: "❌ DEFCON invalide.", ephemeral: true });
+      return interaction.reply({ content: "❌ DEFCON invalide.", flags: 64 });
     }
 
     const message = interaction.fields.getTextInputValue("message")?.trim();
@@ -19,7 +19,7 @@ module.exports = {
     if (colorParsed === undefined) {
       return interaction.reply({
         content: "❌ Couleur invalide. Exemple: **#ff0000** ou laisse vide.",
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -46,7 +46,7 @@ module.exports = {
     // On renvoie le dashboard mis à jour (éphemère)
     const embed = await buildConfigEmbed(interaction.client);
     return interaction.reply({
-      ephemeral: true,
+      flags: 64,
       content: "✅ DEFCON mis à jour.",
       embeds: [embed],
       components: buildConfigButtons(),

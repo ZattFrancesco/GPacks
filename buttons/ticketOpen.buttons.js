@@ -8,7 +8,7 @@ module.exports = {
     const panelId = parts[1];
     const typeId = parts[2];
     if (!panelId || !typeId) {
-      return interaction.reply({ content: "❌ Bouton invalide.", ephemeral: true });
+      return interaction.reply({ content: "❌ Bouton invalide.", flags: 64 });
     }
     return openTicketFromPanel(interaction, { panelId, typeId });
   },

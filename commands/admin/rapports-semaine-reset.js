@@ -11,7 +11,7 @@ module.exports = {
 
   async execute(interaction) {
     const guildId = interaction.guildId;
-    if (!guildId) return interaction.reply({ content: "❌ Commande utilisable uniquement en serveur.", ephemeral: true });
+    if (!guildId) return interaction.reply({ content: "❌ Commande utilisable uniquement en serveur.", flags: 64 });
 
     await addWeekReset(guildId, interaction.user.id);
 
@@ -25,6 +25,6 @@ module.exports = {
       message: "Reset des rapports de la semaine.",
       meta: {},
     });
-    return interaction.reply({ content: "✅ Semaine réinitialisée. Les stats repartent de zéro à partir de maintenant.", ephemeral: true });
+    return interaction.reply({ content: "✅ Semaine réinitialisée. Les stats repartent de zéro à partir de maintenant.", flags: 64 });
   },
 };

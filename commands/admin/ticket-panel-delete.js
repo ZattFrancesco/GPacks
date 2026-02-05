@@ -12,7 +12,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const panelId = interaction.options.getString("id", true);
     const panel = await getPanel(guildId, panelId);
-    if (!panel) return interaction.reply({ content: "❌ Panel introuvable.", ephemeral: true });
+    if (!panel) return interaction.reply({ content: "❌ Panel introuvable.", flags: 64 });
 
     try {
       const channel = await interaction.client.channels.fetch(panel.channel_id);
@@ -21,6 +21,6 @@ module.exports = {
     } catch {}
 
     await deletePanel(guildId, panelId);
-    return interaction.reply({ content: "✅ Panel supprimé (message + DB).", ephemeral: true });
+    return interaction.reply({ content: "✅ Panel supprimé (message + DB).", flags: 64 });
   },
 };

@@ -6,7 +6,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!isOwner(interaction.user.id)) {
-      return interaction.reply({ content: "❌ Réservé à l'owner.", ephemeral: true });
+      return interaction.reply({ content: "❌ Réservé à l'owner.", flags: 64 });
     }
 
     const rawUser = interaction.fields.getTextInputValue("user");
@@ -14,11 +14,11 @@ module.exports = {
 
     const userId = normalizeUserId(rawUser);
     if (!userId) {
-      return interaction.reply({ content: "❌ User ID/mention invalide.", ephemeral: true });
+      return interaction.reply({ content: "❌ User ID/mention invalide.", flags: 64 });
     }
 
     if (userId === interaction.user.id) {
-      return interaction.reply({ content: "❌ Tu ne peux pas te blacklist toi-même.", ephemeral: true });
+      return interaction.reply({ content: "❌ Tu ne peux pas te blacklist toi-même.", flags: 64 });
     }
 
     const before = await isBlacklisted(userId);
@@ -29,7 +29,7 @@ module.exports = {
         `✅ <@${userId}> est blacklisté.` +
         (rawReason ? `\n📝 Raison: ${rawReason}` : "") +
         (before.blacklisted ? "\nℹ️ (déjà blacklisté → infos mises à jour)" : ""),
-      ephemeral: true,
+      flags: 64,
     });
   },
 };

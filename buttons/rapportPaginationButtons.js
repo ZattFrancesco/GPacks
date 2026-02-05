@@ -95,15 +95,15 @@ module.exports = {
     const limitRaw = Number(parts[7]);
 
     if (!ownerId || interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
+      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", flags: 64 });
     }
     if (!session) {
-      return interaction.reply({ content: "❌ Session de pagination invalide.", ephemeral: true });
+      return interaction.reply({ content: "❌ Session de pagination invalide.", flags: 64 });
     }
 
     const sess = getSession(interaction.guildId, ownerId, session);
     if (!sess) {
-      return interaction.reply({ content: "⏱️ Session expirée (15 min). Relance la commande.", ephemeral: true });
+      return interaction.reply({ content: "⏱️ Session expirée (15 min). Relance la commande.", flags: 64 });
     }
 
     const perPage = 10;
@@ -122,7 +122,7 @@ module.exports = {
         : "Aucun reset : depuis le début.";
       title = "🧾 Rapports de jugement — Semaine";
     } else if (mode !== "all") {
-      return interaction.reply({ content: "❌ Pagination inconnue.", ephemeral: true });
+      return interaction.reply({ content: "❌ Pagination inconnue.", flags: 64 });
     }
 
     const search = sess.search || null;

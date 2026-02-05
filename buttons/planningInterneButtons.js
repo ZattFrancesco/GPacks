@@ -288,7 +288,7 @@ module.exports = {
       const parts = interaction.customId.split(":");
       const week = parts[3];
       const owner = parts[4];
-      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", ephemeral: true });
+      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", flags: 64 });
       return interaction.showModal(buildAppointmentDateModal(week));
     }
 
@@ -305,10 +305,10 @@ module.exports = {
       await setWeekMonday(guildId, newWeek);
 
       const rec = await getPlanningMessage(guildId);
-      if (!rec) return interaction.reply({ content: "❌ Planning introuvable en DB.", ephemeral: true });
+      if (!rec) return interaction.reply({ content: "❌ Planning introuvable en DB.", flags: 64 });
 
       const ch = await interaction.guild.channels.fetch(String(rec.channel_id));
-      if (!ch?.isTextBased?.()) return interaction.reply({ content: "❌ Channel du planning introuvable.", ephemeral: true });
+      if (!ch?.isTextBased?.()) return interaction.reply({ content: "❌ Channel du planning introuvable.", flags: 64 });
 
       const msg = await ch.messages.fetch(String(rec.message_id));
       const { embed, components } = await buildWeeklyPlanningMessage({ guildId, weekMondayDate: newWeek });
@@ -326,7 +326,7 @@ module.exports = {
       return interaction.reply({
         content: "Choisis le type d'entrée à ajouter :",
         components: [row],
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -336,7 +336,7 @@ module.exports = {
       const entries = await listEntriesForWeek(guildId, week);
 
       if (!entries.length) {
-        return interaction.reply({ content: "❌ Rien à modifier cette semaine.", ephemeral: true });
+        return interaction.reply({ content: "❌ Rien à modifier cette semaine.", flags: 64 });
       }
 
       const options = entries.slice(0, 25).map((e) => {
@@ -353,7 +353,7 @@ module.exports = {
       );
 
       clearDraft(guildId, userId);
-      return interaction.reply({ content: "Quelle entrée veux-tu modifier ?", components: [row], ephemeral: true });
+      return interaction.reply({ content: "Quelle entrée veux-tu modifier ?", components: [row], flags: 64 });
     }
 
     // --- DEL START: select une entrée ---
@@ -362,7 +362,7 @@ module.exports = {
       const entries = await listEntriesForWeek(guildId, week);
 
       if (!entries.length) {
-        return interaction.reply({ content: "❌ Rien à supprimer cette semaine.", ephemeral: true });
+        return interaction.reply({ content: "❌ Rien à supprimer cette semaine.", flags: 64 });
       }
 
       const options = entries.slice(0, 25).map((e) => {
@@ -379,7 +379,7 @@ module.exports = {
       );
 
       clearDraft(guildId, userId);
-      return interaction.reply({ content: "Quelle entrée veux-tu supprimer ?", components: [row], ephemeral: true });
+      return interaction.reply({ content: "Quelle entrée veux-tu supprimer ?", components: [row], flags: 64 });
     }
 
     // --- OPEN EDIT MODAL ---
@@ -388,10 +388,10 @@ module.exports = {
       const idEntry = parts[3];
       const owner = parts[4];
 
-      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", ephemeral: true });
+      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", flags: 64 });
 
       const entry = await getEntryById(guildId, idEntry);
-      if (!entry) return interaction.reply({ content: "❌ Entrée introuvable.", ephemeral: true });
+      if (!entry) return interaction.reply({ content: "❌ Entrée introuvable.", flags: 64 });
 
       clearDraft(guildId, userId);
       return interaction.showModal(buildEditOpenModal(entry));
@@ -404,7 +404,7 @@ module.exports = {
       const owner = parts[4];
       const choice = parts[5]; // yes|no
 
-      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", ephemeral: true });
+      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", flags: 64 });
 
       if (choice === "no") {
         return interaction.update({ content: "✅ Annulé.", components: [] });

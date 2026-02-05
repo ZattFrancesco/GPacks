@@ -38,13 +38,13 @@ const renameModal = {
     const ticketId = parts[2];
     const newName = (interaction.fields.getTextInputValue("name") || "").trim();
     if (!ticketId || !newName) {
-      return interaction.reply({ content: "❌ Nom invalide.", ephemeral: true });
+      return interaction.reply({ content: "❌ Nom invalide.", flags: 64 });
     }
 
     try {
       await interaction.channel.setName(newName.slice(0, 90));
     } catch {
-      return interaction.reply({ content: "❌ Je ne peux pas rename ce salon (permissions ?).", ephemeral: true });
+      return interaction.reply({ content: "❌ Je ne peux pas rename ce salon (permissions ?).", flags: 64 });
     }
     await auditLog(client, interaction.guildId, {
       module: "TICKETS",
@@ -56,7 +56,7 @@ const renameModal = {
       meta: { ticketId, newName },
     });
 
-    return interaction.reply({ content: "✅ Salon renommé.", ephemeral: true });
+    return interaction.reply({ content: "✅ Salon renommé.", flags: 64 });
   },
 };
 
@@ -67,11 +67,11 @@ const deleteDmModal = {
     const parts = interaction.customId.split(":");
     const ticketId = parts[2];
     const dm = (interaction.fields.getTextInputValue("message") || "").trim();
-    if (!ticketId) return interaction.reply({ content: "❌ Ticket invalide.", ephemeral: true });
+    if (!ticketId) return interaction.reply({ content: "❌ Ticket invalide.", flags: 64 });
 
     const guildId = interaction.guildId;
     const ticket = await getTicketById(guildId, ticketId);
-    if (!ticket) return interaction.reply({ content: "❌ Ticket introuvable.", ephemeral: true });
+    if (!ticket) return interaction.reply({ content: "❌ Ticket introuvable.", flags: 64 });
 
     // Transcript
     let attachment = null;
@@ -96,7 +96,7 @@ const deleteDmModal = {
     try {
       await interaction.channel.delete(`Ticket deleted #${ticket.ticket_id}`);
     } catch {
-      return interaction.reply({ content: "⚠️ Je n'ai pas pu supprimer le salon (permissions ?).", ephemeral: true });
+      return interaction.reply({ content: "⚠️ Je n'ai pas pu supprimer le salon (permissions ?).", flags: 64 });
     }
   },
 };

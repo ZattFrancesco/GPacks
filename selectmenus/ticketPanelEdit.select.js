@@ -77,7 +77,7 @@ module.exports = {
       const panelId = customId.split(":")[3];
       const chosen = interaction.values?.[0];
       const panel = await getPanel(guildId, panelId);
-      if (!panel) return interaction.reply({ content: "❌ Panel introuvable.", ephemeral: true });
+      if (!panel) return interaction.reply({ content: "❌ Panel introuvable.", flags: 64 });
 
       // Champs texte => modal
       if (["title", "description", "logo_url", "banner_url", "color"].includes(chosen)) {
@@ -109,7 +109,7 @@ module.exports = {
       if (chosen === "types") {
         const allTypes = await listTypes(guildId);
         if (!allTypes.length) {
-          return interaction.reply({ content: "❌ Aucun type n'existe. Crée d'abord des types.", ephemeral: true });
+          return interaction.reply({ content: "❌ Aucun type n'existe. Crée d'abord des types.", flags: 64 });
         }
         const current = new Set(JSON.parse(panel.type_ids_json || "[]"));
 
@@ -191,7 +191,7 @@ module.exports = {
     if (customId.startsWith("ticketpanel:edit:types:")) {
       const panelId = customId.split(":")[3];
       const panel = await getPanel(guildId, panelId);
-      if (!panel) return interaction.reply({ content: "❌ Panel introuvable.", ephemeral: true });
+      if (!panel) return interaction.reply({ content: "❌ Panel introuvable.", flags: 64 });
 
       const chosen = interaction.values || [];
       await updatePanel(guildId, panelId, { type_ids_json: JSON.stringify(chosen) });
@@ -223,7 +223,7 @@ module.exports = {
     if (customId.startsWith("ticketpanel:edit:role:")) {
       const panelId = customId.split(":")[3];
       const roleId = interaction.values?.[0];
-      if (!roleId) return interaction.reply({ content: "❌ Aucun rôle sélectionné.", ephemeral: true });
+      if (!roleId) return interaction.reply({ content: "❌ Aucun rôle sélectionné.", flags: 64 });
 
       await updatePanel(guildId, panelId, { required_role_id: roleId });
       await refreshPanelMessage(interaction, panelId);

@@ -69,7 +69,7 @@ module.exports = {
       const ownerId = parts[3];
 
       if (interaction.user.id !== ownerId) {
-        return interaction.reply({ content: "❌ Pas ton visa.", ephemeral: true });
+        return interaction.reply({ content: "❌ Pas ton visa.", flags: 64 });
       }
 
       if (action === "cancel") {
@@ -79,7 +79,7 @@ module.exports = {
 
       const draft = getVisaDraft(interaction.guildId, ownerId);
       if (!draft) {
-        return interaction.reply({ content: "⏱️ Brouillon expiré (15 min). Relance /visa-creation.", ephemeral: true });
+        return interaction.reply({ content: "⏱️ Brouillon expiré (15 min). Relance /visa-creation.", flags: 64 });
       }
 
       if (action === "emploi") {
@@ -162,11 +162,11 @@ module.exports = {
         await interaction.update({ content: "✅ Visa enregistré.", embeds: [], components: [] });
         return interaction.followUp({
           content: "🪪 Merci de mettre **la carte d'identité juste en dessous** (message avec la photo).",
-          ephemeral: true,
+          flags: 64,
         });
       }
 
-      return interaction.reply({ content: "❌ Action inconnue.", ephemeral: true });
+      return interaction.reply({ content: "❌ Action inconnue.", flags: 64 });
     }
 
     // visabtn:visa:<action>:<visaId>:<ownerId>
@@ -176,16 +176,16 @@ module.exports = {
       const ownerId = parts[4];
 
       const row = await getVisaById(interaction.guildId, visaId);
-      if (!row) return interaction.reply({ content: "❌ Visa introuvable.", ephemeral: true });
+      if (!row) return interaction.reply({ content: "❌ Visa introuvable.", flags: 64 });
 
       const can = interaction.user.id === row.reporter_user_id || isManager(interaction);
-      if (!can) return interaction.reply({ content: "❌ Tu n'as pas la permission.", ephemeral: true });
+      if (!can) return interaction.reply({ content: "❌ Tu n'as pas la permission.", flags: 64 });
 
       if (action === "edit") {
         return interaction.reply({
           content: "✏️ Choisis ce que tu veux modifier :",
           components: editPanel(visaId, interaction.user.id),
-          ephemeral: true,
+          flags: 64,
         });
       }
 
@@ -196,7 +196,7 @@ module.exports = {
             .setLabel("✅ Confirmer suppression")
             .setStyle(ButtonStyle.Danger)
         );
-        return interaction.reply({ content: "⚠️ Tu es sûr ?", components: [confirmRow], ephemeral: true });
+        return interaction.reply({ content: "⚠️ Tu es sûr ?", components: [confirmRow], flags: 64 });
       }
     }
 
@@ -204,13 +204,13 @@ module.exports = {
     if (scope === "confirmdel") {
       const visaId = parts[2];
       const ownerId = parts[3];
-      if (interaction.user.id !== ownerId) return interaction.reply({ content: "❌ Pas à toi.", ephemeral: true });
+      if (interaction.user.id !== ownerId) return interaction.reply({ content: "❌ Pas à toi.", flags: 64 });
 
       const row = await getVisaById(interaction.guildId, visaId);
-      if (!row) return interaction.reply({ content: "❌ Visa introuvable.", ephemeral: true });
+      if (!row) return interaction.reply({ content: "❌ Visa introuvable.", flags: 64 });
 
       const can = interaction.user.id === row.reporter_user_id || isManager(interaction);
-      if (!can) return interaction.reply({ content: "❌ Tu n'as pas la permission.", ephemeral: true });
+      if (!can) return interaction.reply({ content: "❌ Tu n'as pas la permission.", flags: 64 });
 
       // supprimer DB + message
       await auditLog(interaction.client, interaction.guildId, {
@@ -240,12 +240,12 @@ module.exports = {
       const action = parts[2];
       const visaId = parts[3];
       const ownerId = parts[4];
-      if (interaction.user.id !== ownerId) return interaction.reply({ content: "❌ Pas à toi.", ephemeral: true });
+      if (interaction.user.id !== ownerId) return interaction.reply({ content: "❌ Pas à toi.", flags: 64 });
 
       const row = await getVisaById(interaction.guildId, visaId);
-      if (!row) return interaction.reply({ content: "❌ Visa introuvable.", ephemeral: true });
+      if (!row) return interaction.reply({ content: "❌ Visa introuvable.", flags: 64 });
       const can = interaction.user.id === row.reporter_user_id || isManager(interaction);
-      if (!can) return interaction.reply({ content: "❌ Tu n'as pas la permission.", ephemeral: true });
+      if (!can) return interaction.reply({ content: "❌ Tu n'as pas la permission.", flags: 64 });
 
       if (action === "exp") {
         const modal = new ModalBuilder().setCustomId(`visaEdit:exp:${visaId}:${ownerId}`).setTitle("Modifier expiration");
@@ -286,6 +286,6 @@ module.exports = {
       }
     }
 
-    return interaction.reply({ content: "❌ Bouton inconnu.", ephemeral: true });
+    return interaction.reply({ content: "❌ Bouton inconnu.", flags: 64 });
   },
 };

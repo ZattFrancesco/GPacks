@@ -17,10 +17,10 @@ module.exports = {
 
     const type = await getType(guildId, typeId);
     if (!type) {
-      return interaction.reply({ content: "❌ Type introuvable.", ephemeral: true });
+      return interaction.reply({ content: "❌ Type introuvable.", flags: 64 });
     }
 
     const view = buildTypeEditView(interaction.guild, type);
-    return interaction.reply({ ...view, ephemeral: true });
+    return interaction.reply({ ...view, flags: 64 });
   },
 };

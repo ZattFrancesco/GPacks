@@ -15,10 +15,10 @@ module.exports = {
     const limit = Number(parts[4]);
 
     if (!ownerId || interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
+      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", flags: 64 });
     }
     if (mode !== "week" && mode !== "all") {
-      return interaction.reply({ content: "❌ Pagination inconnue.", ephemeral: true });
+      return interaction.reply({ content: "❌ Pagination inconnue.", flags: 64 });
     }
 
     const modal = new ModalBuilder()

@@ -25,7 +25,7 @@ module.exports = {
   async execute(interaction) {
     // sécurité en plus (au cas où)
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-      return interaction.reply({ content: "❌ Admin uniquement.", ephemeral: true });
+      return interaction.reply({ content: "❌ Admin uniquement.", flags: 64 });
     }
 
     const ch = interaction.options.getChannel("channel", true);
@@ -52,7 +52,7 @@ module.exports = {
       content:
         `✅ Salon DEFCON configuré sur ${ch}.` +
         (role ? `\n🔔 Rôle mentionné: ${role}` : ""),
-      ephemeral: true,
+      flags: 64,
     });
   },
 };

@@ -21,19 +21,19 @@ module.exports = {
     const ownerId = parts[3];
 
     if (ownerId !== userId) {
-      return interaction.reply({ content: "❌ Ce menu ne t'est pas destiné.", ephemeral: true });
+      return interaction.reply({ content: "❌ Ce menu ne t'est pas destiné.", flags: 64 });
     }
 
     const selected = interaction.values?.[0];
     const idJudge = Number(selected);
 
     if (!idJudge) {
-      return interaction.reply({ content: "❌ Sélection invalide.", ephemeral: true });
+      return interaction.reply({ content: "❌ Sélection invalide.", flags: 64 });
     }
 
     const entry = await getEntryById(guildId, idJudge);
     if (!entry) {
-      return interaction.reply({ content: "❌ Entrée introuvable.", ephemeral: true });
+      return interaction.reply({ content: "❌ Entrée introuvable.", flags: 64 });
     }
 
     clearDraft(guildId, userId);
@@ -56,6 +56,6 @@ module.exports = {
       return interaction.update({ content: "⚠️ Confirme la suppression :", components: [row] });
     }
 
-    return interaction.reply({ content: "❌ Action select inconnue.", ephemeral: true });
+    return interaction.reply({ content: "❌ Action select inconnue.", flags: 64 });
   },
 };

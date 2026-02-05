@@ -51,7 +51,7 @@ module.exports = {
     );
 
     if (!rows || rows.length === 0) {
-      return interaction.reply({ content: '❌ Aucun panel trouvé.', ephemeral: true });
+      return interaction.reply({ content: '❌ Aucun panel trouvé.', flags: 64 });
     }
 
     const grouped = new Map();
@@ -67,6 +67,6 @@ module.exports = {
     }
 
     const embeds = buildEmbedsFromLines('📁 Panels de tickets', lines);
-    return interaction.reply({ embeds, ephemeral: true });
+    return interaction.reply({ embeds, flags: 64 });
   },
 };

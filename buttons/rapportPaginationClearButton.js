@@ -92,15 +92,15 @@ module.exports = {
     const limitRaw = Number(parts[4]);
 
     if (!ownerId || interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
+      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", flags: 64 });
     }
     if (mode !== "week" && mode !== "all") {
-      return interaction.reply({ content: "❌ Pagination inconnue.", ephemeral: true });
+      return interaction.reply({ content: "❌ Pagination inconnue.", flags: 64 });
     }
 
     const sess = getSession(interaction.guildId, ownerId, session);
     if (!sess) {
-      return interaction.reply({ content: "⏱️ Session expirée (15 min). Relance la commande.", ephemeral: true });
+      return interaction.reply({ content: "⏱️ Session expirée (15 min). Relance la commande.", flags: 64 });
     }
 
     // On enlève le filtre

@@ -26,14 +26,14 @@ module.exports = {
     const shouldDelete = interaction.options.getBoolean("delete") ?? false;
 
     const t = await getTicketByChannel(guildId, channel.id);
-    if (!t) return interaction.reply({ content: "❌ Ce salon n'est pas un ticket.", ephemeral: true });
+    if (!t) return interaction.reply({ content: "❌ Ce salon n'est pas un ticket.", flags: 64 });
 
     if (String(t.status || "").toLowerCase() === "closed") {
       // Si déjà fermé, tu peux quand même vouloir delete le salon :
       if (shouldDelete) {
         await interaction.reply({
           content: "ℹ️ Ticket déjà fermé. 🗑️ Suppression du salon…",
-          ephemeral: true,
+          flags: 64,
         });
         try {
           await channel.delete(`Force-close delete par ${interaction.user.tag} (${interaction.user.id})`);
@@ -43,13 +43,13 @@ module.exports = {
         return;
       }
 
-      return interaction.reply({ content: "ℹ️ Ce ticket est déjà fermé.", ephemeral: true });
+      return interaction.reply({ content: "ℹ️ Ce ticket est déjà fermé.", flags: 64 });
     }
 
     // On répond tôt (important si on delete le salon ensuite)
     await interaction.reply({
       content: shouldDelete ? "✅ Ticket fermé. 🗑️ Suppression du salon…" : "✅ Ticket fermé (force-close).",
-      ephemeral: true,
+      flags: 64,
     });
 
     // Si une demande de confirmation était en attente, on la nettoie (sinon elle reste dans le salon).

@@ -13,7 +13,7 @@ module.exports = {
     const value = parts[5];
 
     const type = await getType(guildId, typeId);
-    if (!type) return interaction.reply({ content: "❌ Type introuvable.", ephemeral: true });
+    if (!type) return interaction.reply({ content: "❌ Type introuvable.", flags: 64 });
 
     if (key === "namemodalrename") {
       const v = value === "1" ? 1 : 0;
@@ -32,6 +32,6 @@ module.exports = {
       return interaction.update({ ...view });
     }
 
-    return interaction.reply({ content: "❌ Action inconnue.", ephemeral: true });
+    return interaction.reply({ content: "❌ Action inconnue.", flags: 64 });
   },
 };

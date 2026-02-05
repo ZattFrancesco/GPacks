@@ -15,10 +15,10 @@ module.exports = {
 
     const state = getState(stateId);
     if (!state) {
-      return interaction.reply({ content: "⏱️ Session expirée. Relance /visas.", ephemeral: true });
+      return interaction.reply({ content: "⏱️ Session expirée. Relance /visas.", flags: 64 });
     }
     if (interaction.user.id !== state.ownerId) {
-      return interaction.reply({ content: "❌ Pas ta liste.", ephemeral: true });
+      return interaction.reply({ content: "❌ Pas ta liste.", flags: 64 });
     }
 
     if (action === "search") {

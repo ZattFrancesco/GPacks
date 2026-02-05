@@ -69,22 +69,22 @@ module.exports = [
       const limit = Number(parts[4] || 200);
 
       if (!ownerId || interaction.user.id !== ownerId) {
-        return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
+        return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", flags: 64 });
       }
 
       const sess = getSession(interaction.guildId, ownerId, session);
       if (!sess || !sess.search) {
-        return interaction.reply({ content: "⏱️ Session expirée. Relance /rapport-modifier.", ephemeral: true });
+        return interaction.reply({ content: "⏱️ Session expirée. Relance /rapport-modifier.", flags: 64 });
       }
 
       const val = interaction.values?.[0];
       if (!val || val === "none") {
-        return interaction.reply({ content: "❌ Aucun rapport sélectionné.", ephemeral: true });
+        return interaction.reply({ content: "❌ Aucun rapport sélectionné.", flags: 64 });
       }
 
       const report = await getReportById(interaction.guildId, val);
       if (!report) {
-        return interaction.reply({ content: "❌ Rapport introuvable.", ephemeral: true });
+        return interaction.reply({ content: "❌ Rapport introuvable.", flags: 64 });
       }
 
       const embed = new EmbedBuilder()
@@ -113,23 +113,23 @@ module.exports = [
       const limit = parts[5] || "200";
 
       if (!ownerId || interaction.user.id !== ownerId) {
-        return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
+        return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", flags: 64 });
       }
 
       const sess = getSession(interaction.guildId, ownerId, session);
       if (!sess || !sess.search) {
-        return interaction.reply({ content: "⏱️ Session expirée. Relance /rapport-modifier.", ephemeral: true });
+        return interaction.reply({ content: "⏱️ Session expirée. Relance /rapport-modifier.", flags: 64 });
       }
 
       const fieldKey = interaction.values?.[0];
       const meta = FIELD_META.find((f) => f.key === fieldKey);
       if (!meta) {
-        return interaction.reply({ content: "❌ Champ invalide.", ephemeral: true });
+        return interaction.reply({ content: "❌ Champ invalide.", flags: 64 });
       }
 
       const report = await getReportById(interaction.guildId, reportId);
       if (!report) {
-        return interaction.reply({ content: "❌ Rapport introuvable.", ephemeral: true });
+        return interaction.reply({ content: "❌ Rapport introuvable.", flags: 64 });
       }
 
       // Modal 1 champ (comme demandé)

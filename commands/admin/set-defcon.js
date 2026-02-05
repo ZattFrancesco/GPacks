@@ -65,7 +65,7 @@ module.exports = {
     ),
   async execute(interaction) {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-      return interaction.reply({ content: "❌ Admin uniquement.", ephemeral: true });
+      return interaction.reply({ content: "❌ Admin uniquement.", flags: 64 });
     }
 
     const level = interaction.options.getInteger("niveau", true);
@@ -76,7 +76,7 @@ module.exports = {
     if (!configs.length) {
       return interaction.reply({
         content: "❌ Aucun salon DEFCON n'est configuré. Utilise **/set-defcon-channel** dans chaque serveur.",
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -128,7 +128,7 @@ module.exports = {
 
 return interaction.reply({
       content: `✅ DEFCON ${level} envoyé dans ${ok} salon(s) configuré(s). (modifié: ${edited}, échec: ${failed})`,
-      ephemeral: true,
+      flags: 64,
     });
   },
 };

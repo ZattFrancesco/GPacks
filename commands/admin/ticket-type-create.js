@@ -58,7 +58,7 @@ module.exports = {
 
     // staffrole1 est required, donc on l’a forcément, mais on garde la sécurité
     if (!staffRoleIds.length) {
-      return interaction.reply({ content: "❌ Tu dois mettre au moins 1 rôle staff.", ephemeral: true });
+      return interaction.reply({ content: "❌ Tu dois mettre au moins 1 rôle staff.", flags: 64 });
     }
 
     // Si custom embed : on enchaîne sur un modal
@@ -91,7 +91,7 @@ module.exports = {
 
     return interaction.reply({
       content: `✅ Type **${finalId}** enregistré.`,
-      ephemeral: true,
+      flags: 64,
     });
   },
 };

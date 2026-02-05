@@ -21,13 +21,13 @@ module.exports = {
     const limit = Number(parts[5]);
 
     if (!ownerId || interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
+      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", flags: 64 });
     }
     if (!Number.isFinite(pages) || pages <= 1) {
-      return interaction.reply({ content: "ℹ️ Il n'y a qu'une seule page.", ephemeral: true });
+      return interaction.reply({ content: "ℹ️ Il n'y a qu'une seule page.", flags: 64 });
     }
     if (mode !== "week" && mode !== "all") {
-      return interaction.reply({ content: "❌ Pagination inconnue.", ephemeral: true });
+      return interaction.reply({ content: "❌ Pagination inconnue.", flags: 64 });
     }
 
     const modal = new ModalBuilder()

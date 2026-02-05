@@ -7,7 +7,7 @@ module.exports = {
     const panelId = interaction.customId.split(":")[1];
     const typeId = interaction.values?.[0];
     if (!panelId || !typeId) {
-      return interaction.reply({ content: "❌ Sélection invalide.", ephemeral: true });
+      return interaction.reply({ content: "❌ Sélection invalide.", flags: 64 });
     }
     return openTicketFromPanel(interaction, { panelId, typeId });
   },

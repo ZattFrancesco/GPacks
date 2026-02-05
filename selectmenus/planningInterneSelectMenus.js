@@ -168,7 +168,7 @@ module.exports = {
       const owner = parts[3];
       const week = parts[4];
 
-      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", ephemeral: true });
+      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", flags: 64 });
 
       const picked = interaction.values?.[0];
 
@@ -181,10 +181,10 @@ module.exports = {
     // ---------- ADD / EDIT: finalize APPOINTMENT users ----------
     if ((mode === "add" || mode === "edit") && parts[2] === "appointment_users") {
       const owner = parts[3];
-      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", ephemeral: true });
+      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", flags: 64 });
 
       const d = getDraft(guildId, userId);
-      if (!d) return interaction.reply({ content: "❌ Draft introuvable (refais l'action).", ephemeral: true });
+      if (!d) return interaction.reply({ content: "❌ Draft introuvable (refais l'action).", flags: 64 });
 
       const ids = (interaction.values || []).map(String);
       const joined = ids.join(",");
@@ -218,10 +218,10 @@ module.exports = {
     // ---------- ADD / EDIT: finalize MEETING roles ----------
     if ((mode === "add" || mode === "edit") && parts[2] === "meeting_roles") {
       const owner = parts[3];
-      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", ephemeral: true });
+      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", flags: 64 });
 
       const d = getDraft(guildId, userId);
-      if (!d) return interaction.reply({ content: "❌ Draft introuvable (refais l'action).", ephemeral: true });
+      if (!d) return interaction.reply({ content: "❌ Draft introuvable (refais l'action).", flags: 64 });
 
       const ids = (interaction.values || []).map(String);
       const joined = ids.join(",");
@@ -253,11 +253,11 @@ module.exports = {
     // ---------- EDIT / DEL: pick entry ----------
     if (mode === "edit" && parts[2] === "pick") {
       const owner = parts[3];
-      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", ephemeral: true });
+      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", flags: 64 });
 
       const idEntry = interaction.values?.[0];
       const entry = await getEntryById(guildId, idEntry);
-      if (!entry) return interaction.reply({ content: "❌ Entrée introuvable.", ephemeral: true });
+      if (!entry) return interaction.reply({ content: "❌ Entrée introuvable.", flags: 64 });
 
       clearDraft(guildId, userId);
 
@@ -273,11 +273,11 @@ module.exports = {
 
     if (mode === "del" && parts[2] === "pick") {
       const owner = parts[3];
-      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", ephemeral: true });
+      if (owner !== userId) return interaction.reply({ content: "❌ Cette action n'est pas à toi.", flags: 64 });
 
       const idEntry = interaction.values?.[0];
       const entry = await getEntryById(guildId, idEntry);
-      if (!entry) return interaction.reply({ content: "❌ Entrée introuvable.", ephemeral: true });
+      if (!entry) return interaction.reply({ content: "❌ Entrée introuvable.", flags: 64 });
 
       clearDraft(guildId, userId);
 

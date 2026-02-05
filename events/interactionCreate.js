@@ -58,7 +58,7 @@ module.exports = {
       logger.error(`interactionCreate error: ${err?.stack || err}`);
       try {
         if (!interaction.isAutocomplete?.() && !interaction.replied && !interaction.deferred) {
-          await interaction.reply({ content: "❌ Erreur interne.", ephemeral: true });
+          await interaction.reply({ content: "❌ Erreur interne.", flags: 64 });
         }
       } catch {}
     }

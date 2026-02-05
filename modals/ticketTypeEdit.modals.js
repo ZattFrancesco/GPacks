@@ -49,21 +49,21 @@ module.exports = {
     const field = parts[5];
 
     const type = await getType(guildId, typeId);
-    if (!type) return interaction.reply({ content: "❌ Type introuvable.", ephemeral: true });
+    if (!type) return interaction.reply({ content: "❌ Type introuvable.", flags: 64 });
 
     if (field === "label") {
       const label = interaction.fields.getTextInputValue("label")?.trim();
-      if (!label) return interaction.reply({ content: "❌ Label invalide.", ephemeral: true });
+      if (!label) return interaction.reply({ content: "❌ Label invalide.", flags: 64 });
       await updateType(guildId, type.id, { label });
     } else if (field === "emoji") {
       const emoji = (interaction.fields.getTextInputValue("emoji") || "").trim();
       await updateType(guildId, type.id, { emoji: emoji || null });
     } else {
-      return interaction.reply({ content: "❌ Champ non géré.", ephemeral: true });
+      return interaction.reply({ content: "❌ Champ non géré.", flags: 64 });
     }
 
     const fresh = await getType(guildId, type.id);
     const view = buildTypeEditView(interaction.guild, fresh);
-    return interaction.reply({ ...view, ephemeral: true });
+    return interaction.reply({ ...view, flags: 64 });
   },
 };

@@ -54,7 +54,7 @@ module.exports = {
     if (prefix !== "doj") return;
 
     if (ownerId && interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
+      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", flags: 64 });
     }
 
     const guildId = interaction.guildId;
@@ -62,7 +62,7 @@ module.exports = {
     const channel = interaction.channel;
 
     if (!channel) {
-      return interaction.reply({ content: "❌ Salon introuvable.", ephemeral: true });
+      return interaction.reply({ content: "❌ Salon introuvable.", flags: 64 });
     }
 
     if (action === "cancel") {
@@ -74,7 +74,7 @@ module.exports = {
     if (!draft) {
       return interaction.reply({
         content: "⏱️ Ton dossier a expiré (15 min). Relance `/demande-jugement`.",
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -145,7 +145,7 @@ module.exports = {
       });
     }
 
-    return interaction.reply({ content: "❌ Action inconnue.", ephemeral: true });
+    return interaction.reply({ content: "❌ Action inconnue.", flags: 64 });
   },
 
   wizardComponents,

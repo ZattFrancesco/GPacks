@@ -57,7 +57,7 @@ module.exports = {
     const parts = String(interaction.customId).split(":");
     const level = Number(parts[1]);
     if (![1, 2, 3, 4, 5].includes(level)) {
-      return interaction.reply({ content: "❌ DEFCON invalide.", ephemeral: true });
+      return interaction.reply({ content: "❌ DEFCON invalide.", flags: 64 });
     }
 
     const current = await defconDb.getDefconMessage(level);

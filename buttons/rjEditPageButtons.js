@@ -138,12 +138,12 @@ module.exports = {
     const limitRaw = Number(parts[6]);
 
     if (!ownerId || interaction.user.id !== ownerId) {
-      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", ephemeral: true });
+      return interaction.reply({ content: "❌ Ce panneau ne t'appartient pas.", flags: 64 });
     }
 
     const sess = getSession(interaction.guildId, ownerId, session);
     if (!sess || !sess.search) {
-      return interaction.reply({ content: "⏱️ Session expirée. Relance /rapport-modifier.", ephemeral: true });
+      return interaction.reply({ content: "⏱️ Session expirée. Relance /rapport-modifier.", flags: 64 });
     }
 
     const search = sess.search;
