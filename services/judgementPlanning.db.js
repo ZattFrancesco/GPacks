@@ -222,14 +222,14 @@ async function insertEntry(guildId, data) {
     created_by_user_id,
   } = data;
 
-  const rows = const res = await query(
+  const res = await query(
     `INSERT INTO judgement_planning_entries
       (guild_id, accused_firstname, accused_lastname, accused_id, ticket_url, judgement_datetime, created_by_user_id)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [guildId, accused_firstname, accused_lastname, accused_id, ticket_url, judgement_datetime, created_by_user_id]
   );
 
-  return rows?.insertId;
+  return res?.insertId;
   return res.insertId;
 
 }
