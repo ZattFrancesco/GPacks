@@ -142,6 +142,7 @@ async function upsertPlanningMessage({ guildId, channelId, messageId, weekMonday
      ON DUPLICATE KEY UPDATE channel_id=VALUES(channel_id), message_id=VALUES(message_id), week_monday=VALUES(week_monday)`,
     [String(guildId), String(channelId), String(messageId), week]
   );
+  return res.insertId;
 }
 
 async function setWeekMonday(guildId, weekMonday) {
@@ -185,7 +186,7 @@ async function insertEntry(data) {
   const week = normalizeMysqlDate(weekMonday);
   if (!week) throw new Error("weekMonday invalide");
 
-  await query(
+  const res = await query(
     `INSERT INTO internal_planning_entries
       (guild_id, week_monday, type, event_datetime, person_firstname, person_lastname, concerned_user_ids, meeting_motif, concerned_role_ids, other_reason, created_by_user_id)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

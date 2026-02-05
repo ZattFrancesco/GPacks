@@ -1,6 +1,7 @@
 // commands/utility/set-defcon-channel.js
 const { SlashCommandBuilder, ChannelType, PermissionFlagsBits } = require("discord.js");
 const defconDb = require("../../services/defcon.db");
+const { auditLog } = require("../../src/utils/auditLog");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -34,6 +35,17 @@ module.exports = {
       guildId: interaction.guildId,
       channelId: ch.id,
       pingRoleId: role?.id || null,
+    });
+
+
+    await auditLog(interaction.client, interaction.guildId, {
+      module: "DEFCON",
+      action: "CONFIG_CHANNEL",
+      level: "INFO",
+      userId: interaction.user.id,
+      sourceChannelId: interaction.channelId,
+      message: "Configuration du salon DEFCON mise à jour.",
+      meta: { channelId: ch.id, pingRoleId: role ? role.id : null },
     });
 
     return interaction.reply({

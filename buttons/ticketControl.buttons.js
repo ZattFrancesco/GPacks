@@ -20,6 +20,7 @@ const {
 
 const { buildTranscriptAttachment } = require("../src/utils/ticketTranscript");
 const { buildTicketControlEmbed, buildTicketOpenRows } = require("../src/utils/ticketViews");
+const { auditLog } = require("../src/utils/auditLog");
 
 function isStaff(member, staffRoleIds) {
   if (!member) return false;
@@ -221,6 +222,16 @@ module.exports = {
         await setPendingCloseMessage(guildId, ticket.ticket_id, msg.id);
       } catch {}
 
+      await auditLog(client, guildId, {
+        module: "TICKETS",
+        action: "CLOSE_REQUEST",
+        level: "INFO",
+        userId: interaction.user.id,
+        sourceChannelId: channel.id,
+        message: `Demande de fermeture ticket #${ticket.ticket_id}.`,
+        meta: { ticketId: ticket.ticket_id, ticketChannelId: channel.id, authorUserId: ticket.author_user_id, requestedBy: interaction.user.id },
+      });
+
       return interaction.reply({ content: "✅ Demande de confirmation envoyée au créateur.", ephemeral: true });
     }
 
@@ -234,6 +245,16 @@ module.exports = {
       } catch {}
 
       await setTicketStatus(guildId, ticket.ticket_id, "closed");
+
+      await auditLog(client, guildId, {
+        module: "TICKETS",
+        action: "CLOSE_CONFIRM",
+        level: "INFO",
+        userId: interaction.user.id,
+        sourceChannelId: channel.id,
+        message: `Ticket fermé (#${ticket.ticket_id}).`,
+        meta: { ticketId: ticket.ticket_id, ticketChannelId: channel.id, authorUserId: ticket.author_user_id },
+      });
       try { await clearPendingCloseMessage(guildId, ticket.ticket_id); } catch {}
       const updated = { ...ticket, status: "closed" };
       await refreshControlMessage(channel, client, updated, type, panel);
@@ -285,6 +306,16 @@ module.exports = {
       } catch {}
 
       await setTicketStatus(guildId, ticket.ticket_id, "open");
+
+      await auditLog(client, guildId, {
+        module: "TICKETS",
+        action: "REOPEN",
+        level: "INFO",
+        userId: interaction.user.id,
+        sourceChannelId: channel.id,
+        message: `Ticket ré-ouvert (#${ticket.ticket_id}).`,
+        meta: { ticketId: ticket.ticket_id, ticketChannelId: channel.id },
+      });
       const updated = { ...ticket, status: "open" };
       await refreshControlMessage(channel, client, updated, type, panel);
 

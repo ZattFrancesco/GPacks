@@ -113,13 +113,23 @@ module.exports = {
         const reason = String(safeVal(interaction, "reason") || "").trim();
         if (!reason) return interaction.reply({ content: "❌ Raison vide.", ephemeral: true });
 
-        await insertEntry({
+        const entryId = await insertEntry({
           guildId,
           weekMonday: week,
           type: "OTHER",
           eventDatetime: dt,
           otherReason: reason,
           createdByUserId: userId,
+        });
+
+        await auditLog(interaction.client, interaction.guildId, {
+          module: "PLANNING",
+          action: "CREATE_ENTRY",
+          level: "INFO",
+          userId: interaction.user.id,
+          sourceChannelId: interaction.channelId,
+          message: `Planning interne: entrée créée (#${entryId}).`,
+          meta: { entryId },
         });
 
         await refreshPlanningMessage(interaction, guildId);
@@ -194,12 +204,22 @@ module.exports = {
       if (!dt) return interaction.reply({ content: "❌ Date/heure invalide.", ephemeral: true });
 
       if (type === "TRAINING") {
-        await insertEntry({
+        const entryId = await insertEntry({
           guildId,
           weekMonday: week,
           type: "TRAINING",
           eventDatetime: dt,
           createdByUserId: userId,
+        });
+
+        await auditLog(interaction.client, interaction.guildId, {
+          module: "PLANNING",
+          action: "CREATE_ENTRY",
+          level: "INFO",
+          userId: interaction.user.id,
+          sourceChannelId: interaction.channelId,
+          message: `Planning interne: entrée créée (#${entryId}).`,
+          meta: { entryId },
         });
 
         await refreshPlanningMessage(interaction, guildId);

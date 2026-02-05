@@ -13,6 +13,7 @@ const { getPanel, getType, createTicket, setTicketControlMessageId } = require("
 const { buildTicketControlEmbed, buildTicketOpenRows } = require("./ticketViews");
 const { setOpenDraft } = require("./ticketDrafts");
 const { isBlacklisted } = require("../../services/blacklist.db");
+const { auditLog } = require("./auditLog");
 
 function sanitizeChannelPart(s) {
   return String(s || "")
@@ -145,6 +146,17 @@ const categoryId = type.category_opened_id || null;
     nom,
     prenom,
   });
+
+  await auditLog(interaction.client, guildId, {
+    module: "TICKETS",
+    action: "OPEN",
+    level: "INFO",
+    userId: author.id,
+    sourceChannelId: interaction.channelId,
+    message: `Ticket ouvert (#${ticketId}) • type ${type.id}.`,
+    meta: { ticketId, typeId: type.id, panelId: panel.id, ticketChannelId: channel.id },
+  });
+
 
   // Embed de contrôle + boutons (envoyé en premier)
   const contentParts = [`<@${author.id}>`];

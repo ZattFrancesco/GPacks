@@ -1,6 +1,7 @@
 // commands/utility/set-defcon.js
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require("discord.js");
 const defconDb = require("../../services/defcon.db");
+const { auditLog } = require("../../src/utils/auditLog");
 
 function buildDefconEmbed(level, cfg) {
   const e = new EmbedBuilder()
@@ -113,7 +114,19 @@ module.exports = {
       }
     }
 
-    return interaction.reply({
+    
+    // ✅ LOG
+    await auditLog(interaction.client, interaction.guildId, {
+      module: "DEFCON",
+      action: "SET_LEVEL",
+      level: "INFO",
+      userId: interaction.user.id,
+      sourceChannelId: interaction.channelId,
+      message: `DEFCON ${level} envoyé (${ok} ok, ${failed} échecs).`,
+      meta: { level, ok, edited, failed },
+    });
+
+return interaction.reply({
       content: `✅ DEFCON ${level} envoyé dans ${ok} salon(s) configuré(s). (modifié: ${edited}, échec: ${failed})`,
       ephemeral: true,
     });

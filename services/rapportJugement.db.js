@@ -134,7 +134,7 @@ async function insertReport(data) {
     );
   }
 
-  await query(
+  const res = await query(
     `INSERT INTO doj_jugement_reports (
       guild_id, reporter_user_id, date_jugement_unix,
       nom, prenom,
@@ -160,6 +160,7 @@ async function insertReport(data) {
       observation,
     ]
   );
+  return res.insertId;
 }
 
 async function getCountsByJudge(guildId, sinceDate = null) {

@@ -11,6 +11,7 @@ const {
   updateEntry,
 } = require("../services/judgementPlanning.db");
 const { buildWeeklyPlanningMessage } = require("../src/utils/judgementPlanningView");
+const { auditLog } = require("../src/utils/auditLog");
 const { setDraft, getDraft, clearDraft } = require("../src/utils/judgementPlanningDrafts");
 
 function normalizeName(str, max = 100) {
@@ -142,10 +143,20 @@ module.exports = {
         } catch (_) {}
       }
 
-      await insertEntry(guildId, {
+      const entryId = await insertEntry(guildId, {
         ...draft,
         judgement_datetime: dtStr,
         created_by_user_id: userId,
+      });
+
+      await auditLog(interaction.client, interaction.guildId, {
+        module: "PLANNING",
+        action: "CREATE_JUGEMENT",
+        level: "INFO",
+        userId: interaction.user.id,
+        sourceChannelId: interaction.channelId,
+        message: `Planning jugements: entrée créée (#${entryId}).`,
+        meta: { entryId, accused_id: draft.accused_id, ticket_link: draft.ticket_link },
       });
 
       clearDraft(guildId, userId);
@@ -218,6 +229,16 @@ module.exports = {
         accused_id: draft.accused_id,
         ticket_url: draft.ticket_url,
         judgement_datetime: dtStr,
+      });
+
+      await auditLog(interaction.client, interaction.guildId, {
+        module: "PLANNING",
+        action: "CREATE_JUGEMENT",
+        level: "INFO",
+        userId: interaction.user.id,
+        sourceChannelId: interaction.channelId,
+        message: `Planning jugements: entrée créée (#${entryId}).`,
+        meta: { entryId, accused_id: draft.accused_id, ticket_link: draft.ticket_link },
       });
 
       clearDraft(guildId, userId);

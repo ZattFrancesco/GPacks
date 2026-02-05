@@ -1,6 +1,7 @@
 const { setTicketStatus, getTicketById, getType, getPanel } = require("../services/tickets.db");
 const { buildTranscriptAttachment } = require("../src/utils/ticketTranscript");
 const { buildTicketControlEmbed, buildTicketOpenRows } = require("../src/utils/ticketViews");
+const { auditLog } = require("../src/utils/auditLog");
 
 async function refreshControl(channel, client, ticket, type, panel) {
   try {
@@ -45,6 +46,16 @@ const renameModal = {
     } catch {
       return interaction.reply({ content: "❌ Je ne peux pas rename ce salon (permissions ?).", ephemeral: true });
     }
+    await auditLog(client, interaction.guildId, {
+      module: "TICKETS",
+      action: "RENAME",
+      level: "INFO",
+      userId: interaction.user.id,
+      sourceChannelId: interaction.channelId,
+      message: "Ticket renommé.",
+      meta: { ticketId, newName },
+    });
+
     return interaction.reply({ content: "✅ Salon renommé.", ephemeral: true });
   },
 };

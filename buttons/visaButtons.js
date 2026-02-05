@@ -13,6 +13,7 @@ const {
 const { getVisaDraft, clearVisaDraft } = require("../src/utils/visaDrafts");
 const { buildVisaEmbed } = require("../src/utils/visaFormat");
 const { insertVisa, updateVisa, getVisaById, deleteVisa } = require("../services/visa.db");
+const { auditLog } = require("../src/utils/auditLog");
 
 function isManager(interaction) {
   try {
@@ -212,6 +213,16 @@ module.exports = {
       if (!can) return interaction.reply({ content: "❌ Tu n'as pas la permission.", ephemeral: true });
 
       // supprimer DB + message
+      await auditLog(interaction.client, interaction.guildId, {
+        module: "VISAS",
+        action: "DELETE",
+        level: "WARN",
+        userId: interaction.user.id,
+        sourceChannelId: interaction.channelId,
+        message: `Visa supprimé (#${visaId}).`,
+        meta: { visaId },
+      });
+
       await deleteVisa(interaction.guildId, visaId);
 
       // suppression du message visa (celui stocké en DB)

@@ -9,6 +9,7 @@ const { updateDraft, getDraft, clearDraft } = require("../src/utils/rjDrafts");
 const { panel } = require("../buttons/rapportJugementButtons");
 const { parseJudgementDate, buildRapportJugementEmbed } = require("../src/utils/rapportJugementFormat");
 const { ensureTables, insertReport } = require("../services/rapportJugement.db");
+const { auditLog } = require("../src/utils/auditLog");
 
 function safeVal(interaction, id) {
   try {
@@ -119,7 +120,18 @@ module.exports = {
         embeds: [embed],
       });
 
-      await insertReport(payload);
+      const reportId = await insertReport(payload);
+
+      await auditLog(interaction.client, interaction.guildId, {
+        module: "RAPPORTS",
+        action: "CREATE",
+        level: "INFO",
+        userId: interaction.user.id,
+        sourceChannelId: interaction.channelId,
+        message: `Rapport de jugement créé (#${reportId}).`,
+        meta: { reportId, nom: payload.nom, prenom: payload.prenom, juge: payload.juge },
+      });
+
       clearDraft(interaction.guildId, userId);
     }
   },

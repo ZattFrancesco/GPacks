@@ -1,5 +1,6 @@
 // modals/defconConfigModal.js
 const defconDb = require("../services/defcon.db");
+const { auditLog } = require("../src/utils/auditLog");
 const { buildConfigEmbed, buildConfigButtons, parseColorInput } = require("../src/utils/defconUtils");
 
 module.exports = {
@@ -29,6 +30,17 @@ module.exports = {
       message: message || `DEFCON ${level} activé.`,
       color: colorParsed === null ? null : colorParsed,
       footer,
+    });
+
+
+    await auditLog(interaction.client, interaction.guildId, {
+      module: "DEFCON",
+      action: "CONFIG_MESSAGE",
+      level: "INFO",
+      userId: interaction.user.id,
+      sourceChannelId: interaction.channelId,
+      message: `Message DEFCON ${level} modifié.`,
+      meta: { level, color: colorParsed, footer },
     });
 
     // On renvoie le dashboard mis à jour (éphemère)

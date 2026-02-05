@@ -10,6 +10,7 @@ const {
 } = require("discord.js");
 
 const { getSession } = require("../src/utils/rjReportSessions");
+const { auditLog } = require("../src/utils/auditLog");
 const { listReports, getReportCount, updateReportById } = require("../services/rapportJugement.db");
 const { mentionify } = require("../src/utils/rapportJugementFormat");
 
@@ -216,7 +217,19 @@ module.exports = {
       patch[fieldKey] = raw;
     }
 
-    await updateReportById(interaction.guildId, reportId, patch);
+    const ok = await updateReportById(interaction.guildId, reportId, patch);
+
+    if (ok) {
+      await auditLog(interaction.client, interaction.guildId, {
+        module: "RAPPORTS",
+        action: "UPDATE",
+        level: "INFO",
+        userId: interaction.user.id,
+        sourceChannelId: interaction.channelId,
+        message: `Rapport #${reportId} modifié (${fieldKey}).`,
+        meta: { reportId, field: fieldKey, value: raw },
+      });
+    }
 
     // Refresh du panneau (même page) si possible
     try {
