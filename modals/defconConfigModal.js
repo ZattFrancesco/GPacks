@@ -6,7 +6,7 @@ module.exports = {
   idPrefix: "defconcfgmodal:",
   async execute(interaction) {
     const level = Number(String(interaction.customId).split(":")[1]);
-    if (![1, 2, 3].includes(level)) {
+    if (![1, 2, 3, 4, 5].includes(level)) {
       return interaction.reply({ content: "❌ DEFCON invalide.", ephemeral: true });
     }
 

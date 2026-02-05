@@ -1,6 +1,6 @@
 // services/defcon.db.js
 // DEFCON
-// - Messages: GLOBAUX (1/2/3) dans la DB
+// - Messages: GLOBAUX (1/2/3/4/5) dans la DB
 // - Canaux: PAR SERVEUR (guild_id -> channel_id + ping_role_id + last_message_id)
 
 const { query } = require("./db");
@@ -11,7 +11,7 @@ async function ensureTables() {
   if (ensured) return;
   ensured = true;
 
-  // Messages globaux (niveau 1/2/3)
+  // Messages globaux (niveau 1/2/3/4/5)
   await query(
     `CREATE TABLE IF NOT EXISTS doj_defcon_messages (
       level TINYINT NOT NULL,
@@ -55,7 +55,7 @@ async function ensureTables() {
   }
 
   // Default messages si manquants
-  for (const lvl of [1, 2, 3]) {
+  for (const lvl of [1, 2, 3, 4, 5]) {
     await query(
       `INSERT IGNORE INTO doj_defcon_messages (level, message, color, footer)
        VALUES (?, ?, NULL, NULL)`,

@@ -57,7 +57,9 @@ module.exports = {
         .addChoices(
           { name: "DEFCON 1", value: 1 },
           { name: "DEFCON 2", value: 2 },
-          { name: "DEFCON 3", value: 3 }
+          { name: "DEFCON 3", value: 3 },
+          { name: "DEFCON 4", value: 4 },
+          { name: "DEFCON 5", value: 5 }
         )
     ),
   async execute(interaction) {
