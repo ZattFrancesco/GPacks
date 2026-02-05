@@ -155,8 +155,8 @@ module.exports = {
         level: "INFO",
         userId: interaction.user.id,
         sourceChannelId: interaction.channelId,
-        message: `Planning jugements: entrée créée (#${entryId}).`,
-        meta: { entryId, accused_id: draft.accused_id, ticket_link: draft.ticket_link },
+        message: "Planning jugements : jugement ajouté.",
+        meta: { idJudge: entryId, accused_id: draft.accused_id, ticket_url: draft.ticket_url || null },
       });
 
       clearDraft(guildId, userId);
@@ -233,12 +233,12 @@ module.exports = {
 
       await auditLog(interaction.client, interaction.guildId, {
         module: "PLANNING",
-        action: "CREATE_JUGEMENT",
+        action: "EDIT_JUGEMENT",
         level: "INFO",
         userId: interaction.user.id,
         sourceChannelId: interaction.channelId,
-        message: `Planning jugements: entrée créée (#${entryId}).`,
-        meta: { entryId, accused_id: draft.accused_id, ticket_link: draft.ticket_link },
+        message: "Planning jugements : jugement modifié.",
+        meta: { idJudge: idJudge, accused_id: draft.accused_id, ticket_url: draft.ticket_url || null },
       });
 
       clearDraft(guildId, userId);

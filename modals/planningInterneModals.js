@@ -128,8 +128,8 @@ module.exports = {
           level: "INFO",
           userId: interaction.user.id,
           sourceChannelId: interaction.channelId,
-          message: `Planning interne: entrée créée (#${entryId}).`,
-          meta: { entryId },
+          message: `Planning interne : entrée ajoutée.`,
+          meta: { entryId, week },
         });
 
         await refreshPlanningMessage(interaction, guildId);
@@ -218,8 +218,8 @@ module.exports = {
           level: "INFO",
           userId: interaction.user.id,
           sourceChannelId: interaction.channelId,
-          message: `Planning interne: entrée créée (#${entryId}).`,
-          meta: { entryId },
+          message: `Planning interne : entrée ajoutée.`,
+          meta: { entryId, week },
         });
 
         await refreshPlanningMessage(interaction, guildId);

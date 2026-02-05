@@ -23,6 +23,7 @@ const {
 
 const { buildWeeklyPlanningMessage } = require("../src/utils/judgementPlanningView");
 const { setDraft, clearDraft } = require("../src/utils/judgementPlanningDrafts");
+const { auditLog } = require("../src/utils/auditLog");
 
 function pad2(n) {
   return String(Number(n)).padStart(2, "0");
@@ -384,6 +385,8 @@ module.exports = {
         return interaction.update({ content: "✅ Suppression annulée.", components: [] });
       }
 
+      // Capture infos before deletion for a clean log
+      const before = await getEntryById(guildId, idJudge).catch(() => null);
       await deleteEntry(guildId, idJudge);
 
       // Ce bouton est sur un message éphémère (le menu de suppression),
@@ -392,6 +395,33 @@ module.exports = {
 
       // ...puis on met à jour LE message de planning (stocké en DB).
       await refreshPlanningMessage(interaction, guildId);
+
+      // ✅ Log classique
+      if (before) {
+        const dt = toLocalFromMysqlDatetime(before.judgement_datetime);
+        const when = dt ? `${toFR(dt)} ${pad2(dt.getHours())}:${pad2(dt.getMinutes())}` : "Sans date";
+        const who = `${before.accused_lastname || ""} ${before.accused_firstname || ""}`.trim();
+        const accused = who ? `${who}${before.accused_id ? ` (${before.accused_id})` : ""}` : "Accusé inconnu";
+        await auditLog(interaction.client, guildId, {
+          module: "PLANNING",
+          action: "DELETE_JUGEMENT",
+          level: "INFO",
+          userId: interaction.user.id,
+          sourceChannelId: interaction.channelId,
+          message: `Jugement supprimé : ${when} — ${accused}`,
+          meta: { idJudge: Number(idJudge) },
+        });
+      } else {
+        await auditLog(interaction.client, guildId, {
+          module: "PLANNING",
+          action: "DELETE_JUGEMENT",
+          level: "INFO",
+          userId: interaction.user.id,
+          sourceChannelId: interaction.channelId,
+          message: "Jugement supprimé.",
+          meta: { idJudge: Number(idJudge) },
+        });
+      }
 
       return;
     }
@@ -409,6 +439,17 @@ module.exports = {
 
       await setWeekMonday(guildId, newWeek);
       await refreshPlanningMessage(interaction, guildId);
+
+      // ✅ Log classique : navigation semaine
+      await auditLog(interaction.client, guildId, {
+        module: "PLANNING",
+        action: "WEEK_CHANGE",
+        level: "INFO",
+        userId: interaction.user.id,
+        sourceChannelId: interaction.channelId,
+        message: `Semaine affichée : ${newWeek}`,
+        meta: { week: newWeek, dir: interaction.customId === "jplan:week:prev" ? "prev" : "next" },
+      }).catch(() => {});
 
       // ✅ Navigation silencieuse : on ACK le bouton sans envoyer de message
       if (!interaction.deferred && !interaction.replied) {

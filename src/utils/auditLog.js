@@ -16,27 +16,97 @@ function nowIso() {
   return new Date().toISOString().replace("T", " ").slice(0, 19);
 }
 
-function buildEmbed({ level, module, action, message, userId, sourceChannelId, meta }) {
-  const e = new EmbedBuilder()
-    .setTitle(`[${String(level).toUpperCase()}] ${String(module).toUpperCase()} • ${String(action).toUpperCase()}`)
-    .setDescription(safeStr(message, 4000))
-    .setTimestamp(new Date());
+const LEVEL_EMOJI = {
+  INFO: "ℹ️",
+  WARN: "⚠️",
+  ERROR: "❌",
+};
 
-  // Slight severity color (Discord.js color int)
-  if (String(level).toUpperCase() === "ERROR") e.setColor(0xed4245);
-  else if (String(level).toUpperCase() === "WARN") e.setColor(0xfee75c);
+const MODULE_EMOJI = {
+  DEFCON: "🚨",
+  RAPPORTS: "📄",
+  TICKETS: "🎫",
+  VISAS: "🪪",
+  PLANNING: "📅",
+  BLACKLIST: "⛔",
+  SYSTEM: "⚙️",
+};
+
+// Optional nice labels for common actions (keeps logs "classiques" and readable)
+const ACTION_LABELS = {
+  DEFCON: {
+    SET_LEVEL: "DEFCON modifié",
+    CONFIG_CHANNEL: "Salon DEFCON modifié",
+    CONFIG_MESSAGE: "Message DEFCON modifié",
+  },
+  RAPPORTS: {
+    CREATE: "Rapport créé",
+    UPDATE: "Rapport modifié",
+    DELETE: "Rapport supprimé",
+    WEEK_RESET: "Rapports de la semaine réinitialisés",
+  },
+  TICKETS: {
+    OPEN: "Ticket ouvert",
+    CLOSE_REQUEST: "Fermeture demandée",
+    CLOSE_CONFIRM: "Ticket fermé",
+    REOPEN: "Ticket réouvert",
+    DELETE: "Ticket supprimé",
+    RENAME: "Ticket renommé",
+    ADD_MEMBER: "Membre ajouté au ticket",
+    REMOVE_MEMBER: "Membre retiré du ticket",
+  },
+  VISAS: {
+    CREATE: "Visa créé",
+    UPDATE: "Visa modifié",
+    DELETE: "Visa supprimé",
+    STATUS_UPDATE: "Statut de visa modifié",
+  },
+  PLANNING: {
+    CREATE_ENTRY: "Entrée ajoutée",
+    EDIT_ENTRY: "Entrée modifiée",
+    DELETE_ENTRY: "Entrée supprimée",
+    WEEK_CHANGE: "Semaine changée",
+    CREATE_JUGEMENT: "Jugement ajouté",
+    EDIT_JUGEMENT: "Jugement modifié",
+    DELETE_JUGEMENT: "Jugement supprimé",
+  },
+  BLACKLIST: {
+    ADD: "Ajout blacklist",
+    REMOVE: "Retrait blacklist",
+  },
+};
+
+function humanizeAction(moduleName, action) {
+  const mod = String(moduleName || "SYSTEM").toUpperCase();
+  const act = String(action || "EVENT").toUpperCase();
+  const known = ACTION_LABELS?.[mod]?.[act];
+  if (known) return known;
+  // fallback: "SOME_ACTION" -> "Some action"
+  const s = act.toLowerCase().replace(/_/g, " ");
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function buildEmbed({ level, module, action, message, userId, sourceChannelId }) {
+  const lvl = String(level || "INFO").toUpperCase();
+  const mod = String(module || "SYSTEM").toUpperCase();
+
+  const levelEmoji = LEVEL_EMOJI[lvl] || "ℹ️";
+  const moduleEmoji = MODULE_EMOJI[mod] || "📌";
+  const title = `${levelEmoji} ${moduleEmoji} ${humanizeAction(mod, action)}`;
+
+  const e = new EmbedBuilder().setTitle(title).setDescription(safeStr(message, 4000)).setTimestamp(new Date());
+
+  // Slight severity color
+  if (lvl === "ERROR") e.setColor(0xed4245);
+  else if (lvl === "WARN") e.setColor(0xfee75c);
   else e.setColor(0x5865f2);
 
+  // Logs "classiques": pas d'IDs techniques, pas de JSON.
   const fields = [];
-  if (userId) fields.push({ name: "User", value: `<@${userId}> (${userId})`, inline: true });
-  if (sourceChannelId) fields.push({ name: "Source", value: `<#${sourceChannelId}>`, inline: true });
-
-  if (meta && typeof meta === "object") {
-    const raw = JSON.stringify(meta, null, 2);
-    fields.push({ name: "Meta", value: raw.length > 900 ? "```json\n" + raw.slice(0, 890) + "\n…\n```" : "```json\n" + raw + "\n```", inline: false });
-  }
-
+  if (userId) fields.push({ name: "Par", value: `<@${userId}>`, inline: true });
+  if (sourceChannelId) fields.push({ name: "Salon", value: `<#${sourceChannelId}>`, inline: true });
   if (fields.length) e.addFields(fields);
+
   return e;
 }
 
@@ -93,7 +163,7 @@ async function auditLog(client, guildId, payload = {}) {
           const ch = await client.channels.fetch(chId).catch(() => null);
           if (!ch || !ch.isTextBased?.()) return;
 
-          const embed = buildEmbed({ level, module, action, message, userId, sourceChannelId, meta });
+          const embed = buildEmbed({ level, module, action, message, userId, sourceChannelId });
           await ch.send({ embeds: [embed] });
         } catch (err) {
           logger.warn(`auditLog: cannot send to log channel (${chId}) - ${err?.message || err}`);

@@ -23,6 +23,7 @@ const {
 
 const { buildWeeklyPlanningMessage } = require("../src/utils/internalPlanningView");
 const { clearDraft } = require("../src/utils/internalPlanningDrafts");
+const { auditLog } = require("../src/utils/auditLog");
 
 function pad2(n) {
   return String(Number(n)).padStart(2, "0");
@@ -410,6 +411,8 @@ module.exports = {
         return interaction.update({ content: "✅ Annulé.", components: [] });
       }
 
+      // Capture infos before deletion for a clean log
+      const before = await getEntryById(guildId, idEntry).catch(() => null);
       await deleteEntry(guildId, idEntry);
 
       // refresh message
@@ -424,6 +427,32 @@ module.exports = {
             await msg.edit({ embeds: [embed], components });
           }
         } catch (_) {}
+      }
+
+      // ✅ Log classique
+      if (before) {
+        const dt = toLocalFromMysqlDatetime(before.event_datetime);
+        const when = dt ? `${toFR(dt)} ${pad2(dt.getHours())}h` : "Sans date";
+        const what = shortEntryLabel(before);
+        await auditLog(interaction.client, guildId, {
+          module: "PLANNING",
+          action: "DELETE_ENTRY",
+          level: "INFO",
+          userId: interaction.user.id,
+          sourceChannelId: interaction.channelId,
+          message: `Entrée supprimée : ${when} — ${what}`,
+          meta: { idEntry: String(idEntry) },
+        });
+      } else {
+        await auditLog(interaction.client, guildId, {
+          module: "PLANNING",
+          action: "DELETE_ENTRY",
+          level: "INFO",
+          userId: interaction.user.id,
+          sourceChannelId: interaction.channelId,
+          message: "Entrée supprimée.",
+          meta: { idEntry: String(idEntry) },
+        });
       }
 
       return interaction.update({ content: "🗑️ Supprimé.", components: [] });

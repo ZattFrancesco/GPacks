@@ -1,5 +1,6 @@
 const { isOwner } = require("../src/utils/permissions");
 const { normalizeUserId, addToBlacklist, isBlacklisted } = require("../services/blacklist.db");
+const { auditLog } = require("../src/utils/auditLog");
 
 module.exports = {
   id: "blacklist:add",
@@ -23,6 +24,17 @@ module.exports = {
 
     const before = await isBlacklisted(userId);
     await addToBlacklist({ userId, reason: rawReason, addedBy: interaction.user.id });
+
+    // ✅ Log classique
+    await auditLog(interaction.client, interaction.guildId, {
+      module: "BLACKLIST",
+      action: "ADD",
+      level: "WARN",
+      userId: interaction.user.id,
+      sourceChannelId: interaction.channelId,
+      message: `<@${userId}> ajouté à la blacklist${rawReason ? ` — Raison: ${rawReason}` : ""}`,
+      meta: { targetUserId: userId, reason: rawReason || null, already: Boolean(before?.blacklisted) },
+    }).catch(() => {});
 
     return interaction.reply({
       content:

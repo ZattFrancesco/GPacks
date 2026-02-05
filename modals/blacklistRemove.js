@@ -1,5 +1,6 @@
 const { isOwner } = require("../src/utils/permissions");
 const { normalizeUserId, removeFromBlacklist, isBlacklisted } = require("../services/blacklist.db");
+const { auditLog } = require("../src/utils/auditLog");
 
 module.exports = {
   id: "blacklist:remove",
@@ -22,6 +23,17 @@ module.exports = {
     }
 
     await removeFromBlacklist(userId);
+
+    // ✅ Log classique
+    await auditLog(interaction.client, interaction.guildId, {
+      module: "BLACKLIST",
+      action: "REMOVE",
+      level: "INFO",
+      userId: interaction.user.id,
+      sourceChannelId: interaction.channelId,
+      message: `<@${userId}> retiré de la blacklist.`,
+      meta: { targetUserId: userId },
+    }).catch(() => {});
 
     return interaction.reply({
       content: `✅ <@${userId}> a été retiré de la blacklist.`,
