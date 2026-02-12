@@ -146,7 +146,7 @@ module.exports = {
           nameModalRename: Boolean(type.namemodalrename),
           categoryOpenedId: type.category_opened_id || null,
           staffRoleIds: type.staff_role_ids || [],
-          openPingRoleId: type.open_ping_role_id || [],
+          openPingRoleId: type.open_ping_role_id || null,
           customEmbedEnabled: true,
           editMode: true,
         });
