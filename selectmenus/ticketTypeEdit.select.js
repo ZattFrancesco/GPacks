@@ -114,7 +114,7 @@ module.exports = {
           .setCustomId(`tickettype:edit:openping:${type.id}`)
           .setPlaceholder("Choisir le rôle à ping")
           .setMinValues(1)
-          .setMaxValues(1);
+          .setMaxValues(5);
 
         const clearBtn = new ButtonBuilder()
           .setCustomId(`tickettype:edit:toggle:${type.id}:openping:0`)
