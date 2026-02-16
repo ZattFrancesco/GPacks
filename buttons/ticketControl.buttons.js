@@ -7,6 +7,7 @@ const {
   TextInputStyle,
   UserSelectMenuBuilder,
   PermissionFlagsBits,
+  EmbedBuilder,
 } = require("discord.js");
 
 const {
@@ -20,6 +21,8 @@ const {
 
 const { buildTicketControlEmbed, buildTicketOpenRows } = require("../src/utils/ticketViews");
 const { auditLog } = require("../src/utils/auditLog");
+const logsDb = require("../services/logs.db");
+const { buildTranscriptAttachment } = require("../src/utils/ticketTranscript");
 
 function isStaff(member, staffRoleIds) {
   if (!member) return false;
@@ -377,6 +380,91 @@ async function deleteTicketNow({ interaction, client, ticket }) {
   const guildId = interaction.guildId;
   const channel = interaction.channel;
 
+  // ------------------------------------------------------------------
+  // 1) Transcript (TXT) -> envoyé dans les logs + lien bouton en MP
+  // ------------------------------------------------------------------
+  let transcriptUrl = null;
+  let transcriptName = null;
+
+  try {
+    const safeGuildName = (interaction.guild?.name || "server").replace(/[^a-z0-9_-]+/gi, "-");
+    const base = `ticket-${ticket.ticket_id}-${safeGuildName}`.slice(0, 80);
+    const att = await buildTranscriptAttachment(channel, `${base}-transcript`);
+    transcriptName = att?.name || null;
+
+    // 1.a) Try send to configured logs channel
+    const cfg = await logsDb.getConfig(guildId).catch(() => null);
+    const logChannelId = cfg?.channelId || null;
+    if (logChannelId && client) {
+      const logCh = await client.channels.fetch(logChannelId).catch(() => null);
+      if (logCh && logCh.isTextBased?.()) {
+        const embed = new EmbedBuilder()
+          .setTitle("🎫 Transcript de ticket")
+          .setDescription(
+            `Ticket **#${ticket.ticket_id}** supprimé après fermeture.\n` +
+              `Créateur : <@${ticket.author_user_id}>\n` +
+              `Salon : **${channel?.name || channel?.id || "—"}**`
+          )
+          .setFooter({ text: "Service Public" })
+          .setTimestamp(new Date());
+
+        const msg = await logCh.send({ embeds: [embed], files: [att] }).catch(() => null);
+        const file = msg?.attachments?.first?.();
+        transcriptUrl = file?.url || null;
+      }
+    }
+
+    // 1.b) If no log channel URL, upload to a DM message to get a URL anyway
+    if (!transcriptUrl) {
+      const authorUser = await client.users.fetch(ticket.author_user_id).catch(() => null);
+      if (authorUser) {
+        const dmMsg = await authorUser.send({ files: [att] }).catch(() => null);
+        const file = dmMsg?.attachments?.first?.();
+        transcriptUrl = file?.url || null;
+      }
+    }
+  } catch {
+    // transcript is best-effort
+  }
+
+  // ------------------------------------------------------------------
+  // 2) MP au créateur (embed + bouton transcript)
+  // ------------------------------------------------------------------
+  try {
+    const authorUser = await client.users.fetch(ticket.author_user_id).catch(() => null);
+    if (authorUser) {
+      const closedBy = interaction.member?.displayName || interaction.user?.username || interaction.user?.tag || "—";
+      const serverName = interaction.guild?.name || "ce serveur";
+
+      const dmEmbed = new EmbedBuilder()
+        .setTitle("🎫 Ticket Fermé")
+        .setDescription(
+          `Bonjour <@${ticket.author_user_id}>,\n` +
+            `Votre ticket a été fermé sur **${serverName}**.\n` +
+            `Fermé par : **${closedBy}**\n\n` +
+            `Si vous n’avez pas vu la réponse, nous vous invitons à consulter le transcript du ticket.`
+        )
+        .setFooter({ text: "Service Public" })
+        .setTimestamp(new Date());
+
+      const components = [];
+      if (transcriptUrl) {
+        components.push(
+          new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setStyle(ButtonStyle.Link)
+              .setLabel("📄 Transcript")
+              .setURL(transcriptUrl)
+          )
+        );
+      }
+
+      await authorUser.send({ embeds: [dmEmbed], components }).catch(() => null);
+    }
+  } catch {
+    // DM is best-effort
+  }
+
   // DB
   try {
     await setTicketStatus(guildId, ticket.ticket_id, "deleted");
@@ -390,8 +478,14 @@ async function deleteTicketNow({ interaction, client, ticket }) {
       level: "INFO",
       userId: interaction.user.id,
       sourceChannelId: channel.id,
-      message: `Ticket supprimé (#${ticket.ticket_id}).`,
-      meta: { ticketId: ticket.ticket_id, ticketChannelId: channel.id, authorUserId: ticket.author_user_id },
+      message: `Ticket supprimé (#${ticket.ticket_id}).${transcriptUrl ? " Transcript envoyé aux logs." : ""}`,
+      meta: {
+        ticketId: ticket.ticket_id,
+        ticketChannelId: channel.id,
+        authorUserId: ticket.author_user_id,
+        transcriptUrl: transcriptUrl || null,
+        transcriptName: transcriptName || null,
+      },
     });
   } catch {}
 
