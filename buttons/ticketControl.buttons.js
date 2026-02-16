@@ -18,7 +18,6 @@ const {
   getPanel,
 } = require("../services/tickets.db");
 
-const { buildTranscriptAttachment } = require("../src/utils/ticketTranscript");
 const { buildTicketControlEmbed, buildTicketOpenRows } = require("../src/utils/ticketViews");
 const { auditLog } = require("../src/utils/auditLog");
 
@@ -162,9 +161,7 @@ module.exports = {
       "member",
       "confirmclose",
       "cancelclose",
-      "delete_mp",
-      "delete_nom",
-    ].includes(action);
+          ].includes(action);
 
     if (needStaff && !isStaff(interaction.member, staffRoleIds)) {
       return interaction.reply({ content: "❌ Réservé au staff.", flags: 64 });
@@ -364,81 +361,38 @@ module.exports = {
       });
     }
 
-    // ---------------- DELETE (choix MP) ----------------
+    // ---------------- DELETE (suppression directe) ----------------
     if (action === "delete") {
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`ticket:delete_mp:${ticket.ticket_id}`)
-          .setLabel("MP au créateur : OUI")
-          .setStyle(ButtonStyle.Primary),
-        new ButtonBuilder()
-          .setCustomId(`ticket:delete_nom:${ticket.ticket_id}`)
-          .setLabel("MP au créateur : NON")
-          .setStyle(ButtonStyle.Secondary)
-      );
-
-      return interaction.reply({
-        content: "Avant de supprimer : tu veux envoyer un MP au créateur ?",
-        components: [row],
-        flags: 64,
-      });
-    }
-
-    if (action === "delete_mp") {
-      // Modal message
-      const modal = new ModalBuilder()
-        .setCustomId(`ticket:deleteDmModal:${ticket.ticket_id}`)
-        .setTitle("Message au créateur (optionnel)");
-
-      const input = new TextInputBuilder()
-        .setCustomId("message")
-        .setLabel("Message")
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(false)
-        .setMaxLength(1500);
-
-      modal.addComponents(new ActionRowBuilder().addComponents(input));
-      return interaction.showModal(modal);
-    }
-
-    if (action === "delete_nom") {
-      // Pas de message, on supprime direct
       await interaction.reply({ content: "✅ Suppression en cours...", flags: 64 });
-      return deleteTicketNow({ interaction, client, ticket, type, panel, dmMessage: null });
+      return deleteTicketNow({ interaction, client, ticket });
     }
+
 
     // Les actions "member" / modals / selects sont gérées ailleurs
     return;
   },
 };
 
-async function deleteTicketNow({ interaction, client, ticket, type, panel, dmMessage }) {
+async function deleteTicketNow({ interaction, client, ticket }) {
   const guildId = interaction.guildId;
   const channel = interaction.channel;
-
-  // Transcript
-  let attachment = null;
-  try {
-    attachment = await buildTranscriptAttachment(channel, `ticket-${ticket.ticket_id}`);
-  } catch {}
-
-  // DM créateur
-  try {
-    const user = await client.users.fetch(ticket.author_user_id);
-    if (user) {
-      const files = attachment ? [attachment] : [];
-      await user.send({
-        content:
-          `📌 Ton ticket #${ticket.ticket_id} a été supprimé.` +
-          (dmMessage ? `\n\n📝 Message staff:\n${dmMessage}` : ""),
-        files,
-      });
-    }
-  } catch {}
 
   // DB
   try {
     await setTicketStatus(guildId, ticket.ticket_id, "deleted");
+  } catch {}
+
+  // Log
+  try {
+    await auditLog(client, guildId, {
+      module: "TICKETS",
+      action: "DELETE",
+      level: "INFO",
+      userId: interaction.user.id,
+      sourceChannelId: channel.id,
+      message: `Ticket supprimé (#${ticket.ticket_id}).`,
+      meta: { ticketId: ticket.ticket_id, ticketChannelId: channel.id, authorUserId: ticket.author_user_id },
+    });
   } catch {}
 
   // Delete channel
@@ -450,3 +404,4 @@ async function deleteTicketNow({ interaction, client, ticket, type, panel, dmMes
     } catch {}
   }
 }
+
