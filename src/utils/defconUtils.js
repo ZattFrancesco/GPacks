@@ -15,10 +15,10 @@ function clip(s, n = 200) {
 
 function buildConfigButtons() {
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId("defconcfg:1").setLabel("Defcon 1").setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId("defconcfg:2").setLabel("Defcon 2").setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId("defconcfg:1").setLabel("Defcon 1").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId("defconcfg:2").setLabel("Defcon 2").setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId("defconcfg:3").setLabel("Defcon 3").setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId("defconcfg:4").setLabel("Defcon 4").setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId("defconcfg:4").setLabel("Defcon 4").setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId("defconcfg:5").setLabel("Defcon 5").setStyle(ButtonStyle.Secondary)
   );
   return [row];

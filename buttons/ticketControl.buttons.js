@@ -202,7 +202,7 @@ module.exports = {
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`ticket:closeconfirm:${ticket.ticket_id}`)
-          .setLabel("Confirmer (fermer)")
+          .setLabel("Cloturer le ticket")
           .setStyle(ButtonStyle.Danger),
         new ButtonBuilder()
           .setCustomId(`ticket:closecancel:${ticket.ticket_id}`)
@@ -212,7 +212,7 @@ module.exports = {
 
       const msg = await channel.send({
         // ✅ On ping le créateur + les rôles staff (notification), mais le texte ne ping que créateur + staff qui ferme.
-        content: `${`<@${ticket.author_user_id}>`}${staffMentions ? ` ${staffMentions}` : ""}`,
+        content: `<@${ticket.author_user_id}>`,
         embeds: [embed],
         components: [row],
       });
