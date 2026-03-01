@@ -23,8 +23,12 @@ const { buildTicketControlEmbed, buildTicketOpenRows } = require("../src/utils/t
 const { auditLog } = require("../src/utils/auditLog");
 const logsDb = require("../services/logs.db");
 const { buildTranscriptAttachment } = require("../src/utils/ticketTranscript");
+const { isOwner } = require("../src/utils/permissions");
 
-function isStaff(member, staffRoleIds) {
+function isStaff(member, staffRoleIds, userId) {
+  // ✅ Owner bypass : le propriétaire du bot passe partout sur les actions tickets
+  if (isOwner(userId)) return true;
+
   if (!member) return false;
   if (member.permissions?.has?.(PermissionFlagsBits.ManageChannels)) return true;
   const set = new Set(staffRoleIds || []);
@@ -116,7 +120,7 @@ module.exports = {
       const panel = await getPanel(guildId, ticket.panel_id);
       const staffRoleIds = type?.staff_role_ids || JSON.parse(type?.staff_role_ids_json || "[]");
 
-      if (!isStaff(interaction.member, staffRoleIds)) {
+      if (!isStaff(interaction.member, staffRoleIds, interaction.user.id)) {
         return interaction.reply({ content: "❌ Réservé au staff.", flags: 64 });
       }
 
@@ -166,7 +170,7 @@ module.exports = {
       "cancelclose",
           ].includes(action);
 
-    if (needStaff && !isStaff(interaction.member, staffRoleIds)) {
+    if (needStaff && !isStaff(interaction.member, staffRoleIds, interaction.user.id)) {
       return interaction.reply({ content: "❌ Réservé au staff.", flags: 64 });
     }
 
@@ -498,4 +502,3 @@ async function deleteTicketNow({ interaction, client, ticket }) {
     } catch {}
   }
 }
-
