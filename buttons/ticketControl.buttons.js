@@ -240,7 +240,8 @@ module.exports = {
     }
 
     if (action === "closeconfirm") {
-      if (interaction.user.id !== ticket.author_user_id) {
+      // ✅ Owner bypass : l'owner peut confirmer/forcer la fermeture même si ce n'est pas le créateur
+      if (!isOwner(interaction.user.id) && interaction.user.id !== ticket.author_user_id) {
         return interaction.reply({ content: "❌ Seul le créateur peut confirmer.", flags: 64 });
       }
 
@@ -283,7 +284,8 @@ module.exports = {
     }
 
     if (action === "closecancel") {
-      if (interaction.user.id !== ticket.author_user_id) {
+      // ✅ Owner bypass : l'owner peut annuler la fermeture même si ce n'est pas le créateur
+      if (!isOwner(interaction.user.id) && interaction.user.id !== ticket.author_user_id) {
         return interaction.reply({ content: "❌ Seul le créateur peut annuler.", flags: 64 });
       }
 
