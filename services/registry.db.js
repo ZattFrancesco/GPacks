@@ -4,21 +4,31 @@ const { query } = require("./db");
 /**
  * Upsert (insert/update) d'un item dans registry_items
  * + garantit qu'une ligne existe aussi dans registry_item_overrides
- * @param {{ item_key: string, type: string, default_name: string, default_description?: string|null }} item
+ * @param {{ item_key: string, type: string, default_name: string, default_description?: string|null, category_name?: string|null }} item
  */
 async function upsertRegistryItem(item) {
-  const { item_key, type, default_name, default_description = null } = item || {};
+  // NOTE: la table registry_items contient un champ NOT NULL `category_name`.
+  // Si tu ne le fournis pas, MySQL refusera l'INSERT (ER_NO_DEFAULT_FOR_FIELD).
+  // On force donc une valeur par défaut.
+  const {
+    item_key,
+    type,
+    default_name,
+    default_description = null,
+    category_name = "General",
+  } = item || {};
   if (!item_key || !type || !default_name) return;
 
   // 1) Upsert item
   await query(
-    `INSERT INTO registry_items (item_key, type, default_name, default_description)
-     VALUES (?, ?, ?, ?)
+    `INSERT INTO registry_items (item_key, type, category_name, default_name, default_description)
+     VALUES (?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
        type = VALUES(type),
+       category_name = VALUES(category_name),
        default_name = VALUES(default_name),
        default_description = VALUES(default_description)`,
-    [item_key, type, default_name, default_description]
+    [item_key, type, category_name || "General", default_name, default_description]
   );
 
   // 2) Garantir override existant (si ta table a une PK item_key, ça marche nickel)
