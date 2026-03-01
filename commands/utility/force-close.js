@@ -1,4 +1,11 @@
-const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require("discord.js");
+const {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  ChannelType,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} = require("discord.js");
 const {
   getTicketByChannel,
   setTicketStatus,
@@ -7,6 +14,19 @@ const {
   getPanel,
 } = require("../../services/tickets.db");
 const { buildTicketControlEmbed, buildTicketOpenRows } = require("../../src/utils/ticketViews");
+
+function buildClosedActionsRow(ticketId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`ticket:reopen:${ticketId}`)
+      .setLabel("🔓 Ré-ouvrir")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`ticket:delete:${ticketId}`)
+      .setLabel("🗑️ Supprimer")
+      .setStyle(ButtonStyle.Danger)
+  );
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -52,15 +72,25 @@ module.exports = {
       flags: 64,
     });
 
-    // Si une demande de confirmation était en attente, on la nettoie (sinon elle reste dans le salon).
+    // Si une demande de confirmation était en attente, on la transforme en panneau "ticket fermé"
+    // (ré-ouvrir / supprimer), au lieu de laisser un vieux message ou de ne rien afficher.
+    // Si elle n'existe plus, on enverra un message neuf plus bas.
+    let closedPanelMessage = null;
     if (t.pending_close_message_id) {
-      try {
-        const pending = await channel.messages.fetch(String(t.pending_close_message_id));
-        await pending.delete().catch(() => pending.edit({ components: [] }).catch(() => {}));
-      } catch {}
+      // On clear en DB quoi qu'il arrive (sinon elle peut rester coincée)
       try {
         await clearPendingCloseMessage(guildId, t.ticket_id);
       } catch {}
+
+      // Si on ne delete pas le salon, on réutilise ce message comme panneau "ticket fermé"
+      if (!shouldDelete) {
+        try {
+          const pending = await channel.messages.fetch(String(t.pending_close_message_id));
+          closedPanelMessage = pending;
+        } catch {
+          closedPanelMessage = null;
+        }
+      }
     }
 
     // Retire la vue au créateur
@@ -101,6 +131,31 @@ module.exports = {
         });
       }
     } catch {}
+
+    // ✅ Affiche le même embed que la fermeture normale (avec Ré-ouvrir / Supprimer)
+    // quand on force la fermeture et qu'on ne supprime pas le salon.
+    if (!shouldDelete) {
+      const embed = {
+        title: "✅ Ticket fermé",
+        description:
+          `Ce ticket est maintenant fermé.\n\n` +
+          `🔧 **Actions staff :** utilise les boutons ci-dessous.`,
+      };
+
+      try {
+        if (closedPanelMessage) {
+          await closedPanelMessage.edit({
+            embeds: [embed],
+            components: [buildClosedActionsRow(t.ticket_id)],
+          });
+        } else {
+          await channel.send({
+            embeds: [embed],
+            components: [buildClosedActionsRow(t.ticket_id)],
+          });
+        }
+      } catch {}
+    }
 
     // ✅ Suppression du salon si demandé
     if (shouldDelete) {
