@@ -86,7 +86,7 @@ async function createTicketChannelAndMessages(interaction, { panel, type, nom, p
   const labelPart = sanitizeChannelPart(type.label || type.id);
   const namePart = sanitizeChannelPart(suffix || `${prenom || ""}-${nom || ""}`);
   let channelName = `${labelPart}-${namePart}`.replace(/-+/g, "-").slice(0, 90);
-  if (!channelName) channelName = `ticket-${author.id}`;
+  if (!channelName) channelName = `${labelPart}-${author.id}`;
 
   const staffRoleIds = type.staff_role_ids || JSON.parse(type.staff_role_ids_json || "[]");
 
