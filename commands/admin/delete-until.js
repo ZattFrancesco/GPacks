@@ -35,6 +35,7 @@ module.exports = {
       for (const msg of messages.values()) {
 
         if (msg.id === targetId) {
+          toDelete.push(msg);
           done = true;
           break;
         }
