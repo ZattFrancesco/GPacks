@@ -1,4 +1,4 @@
-const { sendLog, DEFAULT_COLORS, lines } = require('../src/utils/discordLogs');
+const { sendLog, DEFAULT_COLORS, lines, channelLabel } = require('../src/utils/discordLogs');
 
 module.exports = {
   name: 'webhooksUpdate',
@@ -9,7 +9,7 @@ module.exports = {
       color: DEFAULT_COLORS.warning,
       title: '🪝 Webhooks mis à jour',
       description: lines([
-        `**Salon** : ${channel}`,
+        `**Salon** : ${channelLabel(channel)}`,
         `**ID** : \`${channel.id}\``,
       ]),
     });

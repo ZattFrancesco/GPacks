@@ -13,7 +13,7 @@ module.exports = {
         `**Nom** : ${oldEmoji.name} → ${newEmoji.name}`,
         `**ID** : \`${newEmoji.id}\``,
       ]),
-      thumbnail: newEmoji.imageURL(),
+      thumbnail: newEmoji.imageURL?.(),
     });
   },
 };

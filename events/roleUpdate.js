@@ -1,4 +1,4 @@
-const { sendLog, DEFAULT_COLORS, lines, diffPermissionNames } = require('../src/utils/discordLogs');
+const { sendLog, DEFAULT_COLORS, lines, diffPermissionNames, resolveAuditEntry, AuditLogEvent } = require('../src/utils/discordLogs');
 
 module.exports = {
   name: 'roleUpdate',
@@ -17,12 +17,14 @@ module.exports = {
     if (permDiff.removed.length) fields.push({ name: 'Permissions retirées', value: permDiff.removed.join('\n').slice(0, 1024) });
 
     if (!changes.length && !fields.length) return;
+    const entry = await resolveAuditEntry(newRole.guild, AuditLogEvent.RoleUpdate, newRole.id);
 
     await sendLog(client, newRole.guild.id, {
       color: DEFAULT_COLORS.warning,
       title: '🛠️ Rôle mis à jour',
       description: lines([
         `**Rôle** : ${newRole}`,
+        entry?.executor ? `**Par** : ${entry.executor.tag} (\`${entry.executor.id}\`)` : null,
         ...changes,
       ]),
       fields,

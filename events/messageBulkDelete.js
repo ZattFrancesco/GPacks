@@ -12,7 +12,7 @@ module.exports = {
       color: DEFAULT_COLORS.danger,
       title: '🧹 Suppression massive de messages',
       description: lines([
-        `**Salon** : ${channel}`,
+        `**Salon** : ${channel || '—'}`,
         `**Total supprimé** : **${messages?.size || 0}**`,
       ]),
     });

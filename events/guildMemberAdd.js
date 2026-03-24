@@ -1,4 +1,4 @@
-const { sendLog, DEFAULT_COLORS, userLabel, lines } = require('../src/utils/discordLogs');
+const { sendLog, DEFAULT_COLORS, userLabel, lines, timestampLabel } = require('../src/utils/discordLogs');
 
 module.exports = {
   name: 'guildMemberAdd',
@@ -9,8 +9,8 @@ module.exports = {
       title: '📥 Membre rejoint',
       description: lines([
         `**Membre** : ${userLabel(member.user)}`,
-        `**Compte créé** : <t:${Math.floor(member.user.createdTimestamp / 1000)}:F>`,
-        `**Membres** : **${member.guild.memberCount}**`,
+        `**Compte créé** : ${timestampLabel(member.user.createdTimestamp)}`,
+        `**Nombre de membres** : **${member.guild.memberCount}**`,
       ]),
       thumbnail: member.user.displayAvatarURL?.(),
     });

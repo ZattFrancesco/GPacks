@@ -44,4 +44,12 @@ async function setConfig(guildId, channelId) {
   return { ok: true };
 }
 
-module.exports = { ensureTable, getConfig, setConfig };
+async function listEnabledGuildIds() {
+  await ensureTable();
+  const rows = await query(
+    'SELECT guild_id FROM logs_config WHERE channel_id IS NOT NULL AND channel_id <> ""'
+  );
+  return rows.map((r) => String(r.guild_id));
+}
+
+module.exports = { ensureTable, getConfig, setConfig, listEnabledGuildIds };

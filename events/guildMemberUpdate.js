@@ -1,4 +1,13 @@
-const { sendLog, DEFAULT_COLORS, userLabel, lines, roleLabel } = require('../src/utils/discordLogs');
+const {
+  sendLog,
+  DEFAULT_COLORS,
+  userLabel,
+  lines,
+  roleLabel,
+  timestampLabel,
+  resolveAuditEntry,
+  AuditLogEvent,
+} = require('../src/utils/discordLogs');
 
 module.exports = {
   name: 'guildMemberUpdate',
@@ -13,6 +22,22 @@ module.exports = {
       changes.push(`**Pseudo** : ${oldMember.nickname || 'Aucun'} → ${newMember.nickname || 'Aucun'}`);
     }
 
+    if (oldMember.pending !== newMember.pending) {
+      changes.push(`**Vérification membre** : ${oldMember.pending ? 'En attente' : 'Validé'} → ${newMember.pending ? 'En attente' : 'Validé'}`);
+    }
+
+    if (oldMember.communicationDisabledUntilTimestamp !== newMember.communicationDisabledUntilTimestamp) {
+      changes.push(
+        `**Timeout** : ${timestampLabel(oldMember.communicationDisabledUntilTimestamp)} → ${timestampLabel(newMember.communicationDisabledUntilTimestamp)}`
+      );
+    }
+
+    if (oldMember.premiumSinceTimestamp !== newMember.premiumSinceTimestamp) {
+      changes.push(
+        `**Boost** : ${oldMember.premiumSinceTimestamp ? 'Actif' : 'Inactif'} → ${newMember.premiumSinceTimestamp ? 'Actif' : 'Inactif'}`
+      );
+    }
+
     const oldRoles = new Set(oldMember.roles.cache.keys());
     const newRoles = new Set(newMember.roles.cache.keys());
     const addedRoles = [...newRoles].filter((id) => !oldRoles.has(id)).map((id) => newMember.guild.roles.cache.get(id)).filter(Boolean);
@@ -23,11 +48,20 @@ module.exports = {
 
     if (!changes.length && !fields.length) return;
 
+    const roleEntry = addedRoles.length || removedRoles.length
+      ? await resolveAuditEntry(newMember.guild, AuditLogEvent.MemberRoleUpdate, newMember.id)
+      : null;
+    const timeoutEntry = oldMember.communicationDisabledUntilTimestamp !== newMember.communicationDisabledUntilTimestamp
+      ? await resolveAuditEntry(newMember.guild, AuditLogEvent.MemberUpdate, newMember.id)
+      : null;
+
     await sendLog(client, newMember.guild.id, {
       color: DEFAULT_COLORS.warning,
       title: '👤 Membre mis à jour',
       description: lines([
         `**Membre** : ${userLabel(newMember.user)}`,
+        roleEntry?.executor ? `**Modérateur rôles** : ${userLabel(roleEntry.executor)}` : null,
+        timeoutEntry?.executor ? `**Modérateur timeout** : ${userLabel(timeoutEntry.executor)}` : null,
         ...changes,
       ]),
       fields,

@@ -16,7 +16,7 @@ module.exports = {
         `**Auteur** : ${userLabel(newMessage.author)}`,
         `**Salon** : ${channelLabel(newMessage.channel)}`,
         `**Message ID** : \`${newMessage.id}\``,
-        `[Aller au message](${newMessage.url})`,
+        newMessage.url ? `[Aller au message](${newMessage.url})` : null,
       ]),
       fields: [
         { name: 'Avant', value: trim(before || '*Vide*', 1024) },

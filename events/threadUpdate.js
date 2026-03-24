@@ -9,6 +9,7 @@ module.exports = {
     if (oldThread.name !== newThread.name) changes.push(`**Nom** : ${oldThread.name} → ${newThread.name}`);
     if (oldThread.archived !== newThread.archived) changes.push(`**Archivé** : ${oldThread.archived ? 'Oui' : 'Non'} → ${newThread.archived ? 'Oui' : 'Non'}`);
     if (oldThread.locked !== newThread.locked) changes.push(`**Verrouillé** : ${oldThread.locked ? 'Oui' : 'Non'} → ${newThread.locked ? 'Oui' : 'Non'}`);
+    if (oldThread.autoArchiveDuration !== newThread.autoArchiveDuration) changes.push(`**Auto-archive** : ${oldThread.autoArchiveDuration} → ${newThread.autoArchiveDuration}`);
     if (!changes.length) return;
 
     await sendLog(client, newThread.guild.id, {

@@ -1,5 +1,4 @@
-const { isSilentMuted } = require('../services/silentMute.db');
-const { sendLog, DEFAULT_COLORS, userLabel, channelLabel, lines } = require('../src/utils/discordLogs');
+const { sendLog, DEFAULT_COLORS, userLabel, channelLabel, lines, resolveAuditEntry, AuditLogEvent } = require('../src/utils/discordLogs');
 
 module.exports = {
   name: 'voiceStateUpdate',
@@ -22,12 +21,14 @@ module.exports = {
         ]),
       });
     } else if (leftChannel) {
+      const disconnectEntry = await resolveAuditEntry(oldState.guild, AuditLogEvent.MemberDisconnect, member.id);
       await sendLog(client, oldState.guild.id, {
         color: DEFAULT_COLORS.danger,
-        title: '🔇 Déconnexion vocale',
+        title: disconnectEntry ? '⛔ Déconnexion vocale forcée' : '🔇 Déconnexion vocale',
         description: lines([
           `**Membre** : ${userLabel(member.user)}`,
           `**Salon** : ${channelLabel(oldState.channel)}`,
+          disconnectEntry?.executor ? `**Par** : ${userLabel(disconnectEntry.executor)}` : null,
         ]),
       });
     } else if (switchedChannel) {
@@ -49,6 +50,7 @@ module.exports = {
     if (oldState.selfDeaf !== newState.selfDeaf) statusChanges.push(`**Self deaf** : ${oldState.selfDeaf ? 'Oui' : 'Non'} → ${newState.selfDeaf ? 'Oui' : 'Non'}`);
     if (oldState.streaming !== newState.streaming) statusChanges.push(`**Stream** : ${oldState.streaming ? 'Oui' : 'Non'} → ${newState.streaming ? 'Oui' : 'Non'}`);
     if (oldState.selfVideo !== newState.selfVideo) statusChanges.push(`**Caméra** : ${oldState.selfVideo ? 'Oui' : 'Non'} → ${newState.selfVideo ? 'Oui' : 'Non'}`);
+    if (oldState.suppress !== newState.suppress) statusChanges.push(`**Suppress** : ${oldState.suppress ? 'Oui' : 'Non'} → ${newState.suppress ? 'Oui' : 'Non'}`);
 
     if (statusChanges.length) {
       await sendLog(client, newState.guild.id, {
@@ -60,20 +62,5 @@ module.exports = {
         ]),
       });
     }
-
-    const justBecameConnected = joinedChannel || switchedChannel;
-    if (!justBecameConnected) return;
-    if (!(await isSilentMuted(newState.guild.id, member.id))) return;
-
-    await sendLog(client, newState.guild.id, {
-      color: DEFAULT_COLORS.danger,
-      title: '🔕 Silent-mute vocal déclenché',
-      description: lines([
-        `**Membre** : ${userLabel(member.user)}`,
-        `**Tentative de connexion** : ${channelLabel(newState.channel)}`,
-      ]),
-    });
-
-    await member.voice.disconnect('Silent-mute actif').catch(() => {});
   },
 };

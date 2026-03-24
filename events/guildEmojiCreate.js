@@ -12,7 +12,7 @@ module.exports = {
         `**Nom** : ${emoji.name}`,
         `**ID** : \`${emoji.id}\``,
       ]),
-      thumbnail: emoji.imageURL(),
+      thumbnail: emoji.imageURL?.(),
     });
   },
 };
