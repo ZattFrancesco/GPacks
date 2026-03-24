@@ -1,5 +1,6 @@
 // events/interactionCreate.js
 const logger = require("../src/utils/logger");
+const { sendLog, DEFAULT_COLORS, lines, userLabel, channelLabel } = require("../src/utils/discordLogs");
 
 const handleButton = require("../handlers/buttonHandler");
 const handleModal = require("../handlers/modalHandler");
@@ -18,6 +19,17 @@ module.exports = {
       if (interaction.guildId && interaction.user && !interaction.user.bot) {
         const silentMuted = await isSilentMuted(interaction.guildId, interaction.user.id);
         if (silentMuted) {
+          await sendLog(client, interaction.guildId, {
+            color: DEFAULT_COLORS.danger,
+            title: "🔕 Silent-mute interaction bloquée",
+            description: lines([
+              `**Utilisateur** : ${userLabel(interaction.user)}`,
+              `**Type** : ${interaction.type}`,
+              interaction.channel ? `**Salon** : ${channelLabel(interaction.channel)}` : null,
+              interaction.commandName ? `**Commande** : \`${interaction.commandName}\`` : null,
+              interaction.customId ? `**Custom ID** : \`${interaction.customId}\`` : null,
+            ]),
+          }).catch(() => {});
           if (interaction.isChatInputCommand?.() || interaction.isContextMenuCommand?.()) {
             if (!interaction.deferred && !interaction.replied) {
               await interaction.deferReply().catch(() => {});
@@ -64,6 +76,17 @@ module.exports = {
       if (interaction.isChatInputCommand()) {
         const cmd = client.commands.get(interaction.commandName);
         if (!cmd) return;
+
+        await sendLog(client, interaction.guildId, {
+          color: DEFAULT_COLORS.info,
+          title: "💻 Commande slash exécutée",
+          description: lines([
+            `**Utilisateur** : ${userLabel(interaction.user)}`,
+            `**Commande** : \`/${interaction.commandName}\``,
+            interaction.channel ? `**Salon** : ${channelLabel(interaction.channel)}` : null,
+          ]),
+        }).catch(() => {});
+
         return cmd.execute(interaction, client);
       }
 
@@ -88,6 +111,16 @@ module.exports = {
       if (interaction.isModalSubmit()) return handleModal(client, interaction);
     } catch (err) {
       logger.error(`interactionCreate error: ${err?.stack || err}`);
+      await sendLog(client, interaction.guildId, {
+        color: DEFAULT_COLORS.danger,
+        title: "❌ Erreur interaction",
+        description: lines([
+          `**Utilisateur** : ${interaction?.user ? userLabel(interaction.user) : "—"}`,
+          interaction?.commandName ? `**Commande** : \`/${interaction.commandName}\`` : null,
+          interaction?.customId ? `**Custom ID** : \`${interaction.customId}\`` : null,
+          `**Erreur** : \`${(err?.message || String(err)).slice(0, 900)}\``,
+        ]),
+      }).catch(() => {});
       try {
         if (!interaction.isAutocomplete?.() && !interaction.replied && !interaction.deferred) {
           await interaction.reply({ content: "❌ Erreur interne.", flags: 64 });

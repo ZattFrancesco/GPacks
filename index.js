@@ -3,6 +3,7 @@ const { Client, Collection, GatewayIntentBits, Partials } = require("discord.js"
 
 const { loadEnv } = require("./src/utils/env");
 const logger = require("./src/utils/logger");
+const { sendBotLogToAllGuilds, DEFAULT_COLORS, lines } = require("./src/utils/discordLogs");
 
 const { loadEvents } = require("./src/handlers/eventHandler");
 const { loadSlashCommands, loadPrefixCommands } = require("./src/handlers/commandHandler");
@@ -66,12 +67,28 @@ const loadInteractions = require("./handlers/loadInteractions");
 loadInteractions(client);
 
 // --- Crash safety ---
-process.on("unhandledRejection", (err) =>
-  logger.error(`UNHANDLED REJECTION: ${err?.stack || err}`)
-);
-process.on("uncaughtException", (err) =>
-  logger.error(`UNCAUGHT EXCEPTION: ${err?.stack || err}`)
-);
+process.on("unhandledRejection", (err) => {
+  logger.error(`UNHANDLED REJECTION: ${err?.stack || err}`);
+  sendBotLogToAllGuilds(client, {
+    color: DEFAULT_COLORS.danger,
+    title: '🚨 Unhandled rejection',
+    description: lines([
+      `**Erreur** : \`${String(err?.message || err).slice(0, 900)}\``,
+    ]),
+    footer: 'Ghost\'Packs • Bot logs',
+  }).catch(() => {});
+});
+process.on("uncaughtException", (err) => {
+  logger.error(`UNCAUGHT EXCEPTION: ${err?.stack || err}`);
+  sendBotLogToAllGuilds(client, {
+    color: DEFAULT_COLORS.danger,
+    title: '💥 Uncaught exception',
+    description: lines([
+      `**Erreur** : \`${String(err?.message || err).slice(0, 900)}\``,
+    ]),
+    footer: 'Ghost\'Packs • Bot logs',
+  }).catch(() => {});
+});
 
 // --- Bootstrap ---
 (async () => {

@@ -7,6 +7,7 @@ const logger = require("../src/utils/logger");
 const { isOwner } = require("../src/utils/permissions");
 const { isBlacklisted } = require("../services/blacklist.db");
 const { isSilentMuted } = require("../services/silentMute.db");
+const { sendLog, DEFAULT_COLORS, lines, userLabel, channelLabel, trim } = require("../src/utils/discordLogs");
 
 module.exports = {
   name: "messageCreate",
@@ -15,6 +16,15 @@ module.exports = {
     if (!message || message.author?.bot) return;
 
     if (message.guildId && (await isSilentMuted(message.guildId, message.author.id))) {
+      await sendLog(client, message.guildId, {
+        color: DEFAULT_COLORS.danger,
+        title: "🔕 Silent-mute message bloqué",
+        description: lines([
+          `**Auteur** : ${userLabel(message.author)}`,
+          `**Salon** : ${channelLabel(message.channel)}`,
+        ]),
+        fields: [{ name: "Contenu", value: trim(message.content || "*Aucun contenu texte*", 1024) }],
+      }).catch(() => {});
       await message.delete().catch(() => {});
       return;
     }
@@ -57,8 +67,26 @@ module.exports = {
     if (!cmd) return;
 
     try {
+      await sendLog(client, message.guildId, {
+        color: DEFAULT_COLORS.info,
+        title: "⌨️ Commande préfixe exécutée",
+        description: lines([
+          `**Auteur** : ${userLabel(message.author)}`,
+          `**Commande** : \`${usedPrefix}${name}\``,
+          `**Salon** : ${channelLabel(message.channel)}`,
+        ]),
+      }).catch(() => {});
       await cmd.execute({ client, message, args });
     } catch (err) {
+      await sendLog(client, message.guildId, {
+        color: DEFAULT_COLORS.danger,
+        title: "❌ Erreur commande préfixe",
+        description: lines([
+          `**Auteur** : ${userLabel(message.author)}`,
+          `**Commande** : \`${usedPrefix}${name}\``,
+          `**Erreur** : \`${(err?.message || String(err)).slice(0, 900)}\``,
+        ]),
+      }).catch(() => {});
       logger.error(`Erreur prefix ${name}: ${err?.stack || err}`);
       await message.reply("❌ Erreur pendant la commande.").catch(() => {});
     }
