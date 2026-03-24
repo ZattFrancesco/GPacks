@@ -8,12 +8,44 @@ const handleAuto = require("../handlers/autocompleteHandler");
 const handleContext = require("../handlers/contextMenuHandler");
 
 const { checkPermsDb, deny } = require("../src/utils/permissionGuardDb");
+const { isSilentMuted } = require("../services/silentMute.db");
 
 module.exports = {
   name: "interactionCreate",
   once: false,
   async execute(client, interaction) {
     try {
+      if (interaction.guildId && interaction.user && !interaction.user.bot) {
+        const silentMuted = await isSilentMuted(interaction.guildId, interaction.user.id);
+        if (silentMuted) {
+          if (interaction.isChatInputCommand?.() || interaction.isContextMenuCommand?.()) {
+            if (!interaction.deferred && !interaction.replied) {
+              await interaction.deferReply().catch(() => {});
+            }
+            return;
+          }
+
+          if (interaction.isButton?.() || interaction.isAnySelectMenu?.()) {
+            if (!interaction.deferred && !interaction.replied) {
+              await interaction.deferUpdate().catch(() => {});
+            }
+            return;
+          }
+
+          if (interaction.isModalSubmit?.()) {
+            if (!interaction.deferred && !interaction.replied) {
+              await interaction.deferReply({ flags: 64 }).catch(() => {});
+            }
+            return;
+          }
+
+          if (interaction.isAutocomplete?.()) {
+            await interaction.respond([]).catch(() => {});
+            return;
+          }
+        }
+      }
+
       // Blacklist globale + guard DB : on bloque TOUTES les interactions
       const inferKey = () => {
         if (interaction.isChatInputCommand?.()) return `slash:${interaction.commandName}`;

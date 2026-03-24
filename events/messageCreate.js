@@ -6,12 +6,18 @@
 const logger = require("../src/utils/logger");
 const { isOwner } = require("../src/utils/permissions");
 const { isBlacklisted } = require("../services/blacklist.db");
+const { isSilentMuted } = require("../services/silentMute.db");
 
 module.exports = {
   name: "messageCreate",
   once: false,
   async execute(client, message) {
     if (!message || message.author?.bot) return;
+
+    if (message.guildId && (await isSilentMuted(message.guildId, message.author.id))) {
+      await message.delete().catch(() => {});
+      return;
+    }
 
     // Blacklist globale (owner jamais bloqué)
     if (!isOwner(message.author.id)) {
