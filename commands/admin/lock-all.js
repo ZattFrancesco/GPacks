@@ -18,7 +18,19 @@ function serializeOverwrites(channel) {
 function canBeLocked(channel) {
   if (!channel) return false;
   if (channel.isThread?.()) return false;
-  return typeof channel.permissionOverwrites?.edit === 'function';
+  if (typeof channel.permissionOverwrites?.edit !== 'function') return false;
+
+  const guild = channel.guild;
+  if (!guild) return false;
+
+  if (
+    channel.id === guild.rulesChannelId ||
+    channel.id === guild.publicUpdatesChannelId
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 module.exports = {
@@ -59,14 +71,20 @@ module.exports = {
         await saveLockSnapshot(interaction.guildId, channel.id, interaction.user.id, snapshot);
 
         try {
-          await channel.permissionOverwrites.edit(interaction.guild.roles.everyone, {
-            ViewChannel: false,
-          }, {
-            reason: `Lock-all par ${interaction.user.tag} (${interaction.user.id})`,
-          });
+          await channel.permissionOverwrites.edit(
+            interaction.guild.roles.everyone,
+            { ViewChannel: false },
+            { reason: `Lock-all par ${interaction.user.tag} (${interaction.user.id})` }
+          );
           locked += 1;
         } catch (error) {
           await deleteLockSnapshot(interaction.guildId, channel.id).catch(() => {});
+
+          if (error?.code === 350003) {
+            skipped += 1;
+            continue;
+          }
+
           failures.push(`${channel.name} (${channel.id})`);
         }
       } catch {

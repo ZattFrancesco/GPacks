@@ -3,6 +3,7 @@ const {
   ensureTables,
   getLockSnapshot,
   saveLockSnapshot,
+  deleteLockSnapshot,
 } = require('../../services/channelLocks.db');
 
 function serializeOverwrites(channel) {
@@ -17,7 +18,19 @@ function serializeOverwrites(channel) {
 function canBeLocked(channel) {
   if (!channel) return false;
   if (channel.isThread?.()) return false;
-  return typeof channel.permissionOverwrites?.edit === 'function';
+  if (typeof channel.permissionOverwrites?.edit !== 'function') return false;
+
+  const guild = channel.guild;
+  if (!guild) return false;
+
+  if (
+    channel.id === guild.rulesChannelId ||
+    channel.id === guild.publicUpdatesChannelId
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 module.exports = {
@@ -56,7 +69,7 @@ module.exports = {
     const existing = await getLockSnapshot(interaction.guildId, channel.id);
     if (existing) {
       return interaction.editReply({
-        content: `⚠️ ${channel} est déjà locké.` ,
+        content: `⚠️ ${channel} est déjà locké.`,
       });
     }
 
@@ -71,20 +84,27 @@ module.exports = {
     await saveLockSnapshot(interaction.guildId, channel.id, interaction.user.id, snapshot);
 
     try {
-      await channel.permissionOverwrites.edit(interaction.guild.roles.everyone, {
-        ViewChannel: false,
-      }, {
-        reason: `Lock par ${interaction.user.tag} (${interaction.user.id})`,
-      });
+      await channel.permissionOverwrites.edit(
+        interaction.guild.roles.everyone,
+        { ViewChannel: false },
+        { reason: `Lock par ${interaction.user.tag} (${interaction.user.id})` }
+      );
     } catch (error) {
-      // rollback si le lock échoue
-      const { deleteLockSnapshot } = require('../../services/channelLocks.db');
       await deleteLockSnapshot(interaction.guildId, channel.id).catch(() => {});
-      throw error;
+
+      if (error?.code === 350003) {
+        return interaction.editReply({
+          content: `⚠️ ${channel} ne peut pas être locké car Discord l’utilise comme salon système / onboarding et il doit rester visible par tout le monde.`,
+        });
+      }
+
+      return interaction.editReply({
+        content: `❌ Impossible de lock ${channel}. ${error?.message || 'Erreur inconnue.'}`,
+      });
     }
 
     return interaction.editReply({
-      content: `🔒 ${channel} a été locké.` ,
+      content: `🔒 ${channel} a été locké.`,
     });
   },
 };
