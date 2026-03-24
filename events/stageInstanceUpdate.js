@@ -11,6 +11,7 @@ module.exports = {
     if (!changes.length) return;
 
     await sendLog(client, newStage.guildId, {
+      type: 'stage_instance_update',
       color: DEFAULT_COLORS.warning,
       title: '🛠️ Stage mis à jour',
       description: lines([

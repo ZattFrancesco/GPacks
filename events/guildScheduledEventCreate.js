@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, event) {
     if (!event?.guildId) return;
     await sendLog(client, event.guildId, {
+      type: 'guild_scheduled_event_create',
       color: DEFAULT_COLORS.success,
       title: '📅 Événement planifié créé',
       description: lines([

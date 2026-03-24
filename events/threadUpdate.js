@@ -13,6 +13,7 @@ module.exports = {
     if (!changes.length) return;
 
     await sendLog(client, newThread.guild.id, {
+      type: 'thread_update',
       color: DEFAULT_COLORS.warning,
       title: '🛠️ Thread mis à jour',
       description: lines([

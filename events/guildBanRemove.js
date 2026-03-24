@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, ban) {
     const entry = await resolveAuditEntry(ban.guild, AuditLogEvent.MemberBanRemove, ban.user.id);
     await sendLog(client, ban.guild.id, {
+      type: 'guild_ban_remove',
       color: DEFAULT_COLORS.success,
       title: '🔓 Ban retiré',
       description: lines([

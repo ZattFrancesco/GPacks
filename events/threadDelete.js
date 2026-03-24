@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, thread) {
     if (!thread?.guild?.id) return;
     await sendLog(client, thread.guild.id, {
+      type: 'thread_delete',
       color: DEFAULT_COLORS.danger,
       title: '🗑️ Thread supprimé',
       description: lines([

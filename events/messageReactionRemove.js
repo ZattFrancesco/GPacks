@@ -12,6 +12,7 @@ module.exports = {
     if (!message?.guildId || user?.bot) return;
 
     await sendLog(client, message.guildId, {
+      type: 'message_reaction_remove',
       color: DEFAULT_COLORS.warning,
       title: '➖ Réaction retirée',
       description: lines([

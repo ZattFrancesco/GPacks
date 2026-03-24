@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, channel) {
     if (!channel?.guild?.id) return;
     await sendLog(client, channel.guild.id, {
+      type: 'webhooks_update',
       color: DEFAULT_COLORS.warning,
       title: '🪝 Webhooks mis à jour',
       description: lines([

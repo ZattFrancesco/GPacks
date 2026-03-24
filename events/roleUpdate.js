@@ -20,6 +20,7 @@ module.exports = {
     const entry = await resolveAuditEntry(newRole.guild, AuditLogEvent.RoleUpdate, newRole.id);
 
     await sendLog(client, newRole.guild.id, {
+      type: 'role_update',
       color: DEFAULT_COLORS.warning,
       title: '🛠️ Rôle mis à jour',
       description: lines([

@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, event) {
     if (!event?.guildId) return;
     await sendLog(client, event.guildId, {
+      type: 'guild_scheduled_event_delete',
       color: DEFAULT_COLORS.danger,
       title: '🗑️ Événement planifié supprimé',
       description: lines([

@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, message) {
     if (!message?.guildId || message?.author?.bot) return;
     await sendLog(client, message.guildId, {
+      type: 'message_delete',
       color: DEFAULT_COLORS.danger,
       title: '🗑️ Message supprimé',
       description: lines([

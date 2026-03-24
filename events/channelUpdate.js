@@ -33,6 +33,7 @@ module.exports = {
     const entry = await resolveAuditEntry(newChannel.guild, AuditLogEvent.ChannelUpdate, newChannel.id);
 
     await sendLog(client, newChannel.guild.id, {
+      type: 'channel_update',
       color: DEFAULT_COLORS.warning,
       title: '🛠️ Salon mis à jour',
       description: lines([

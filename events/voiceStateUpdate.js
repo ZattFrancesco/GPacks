@@ -13,6 +13,7 @@ module.exports = {
 
     if (joinedChannel) {
       await sendLog(client, newState.guild.id, {
+      type: 'voice_state_update',
         color: DEFAULT_COLORS.success,
         title: '🔊 Connexion vocale',
         description: lines([

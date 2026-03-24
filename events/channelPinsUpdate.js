@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, channel, time) {
     if (!channel?.guild?.id) return;
     await sendLog(client, channel.guild.id, {
+      type: 'channel_pins_update',
       color: DEFAULT_COLORS.info,
       title: '📌 Pins mis à jour',
       description: lines([

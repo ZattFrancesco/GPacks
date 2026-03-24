@@ -11,6 +11,7 @@ module.exports = {
     if (!changes.length) return;
 
     await sendLog(client, newSticker.guild.id, {
+      type: 'sticker_update',
       color: DEFAULT_COLORS.warning,
       title: '🛠️ Sticker mis à jour',
       description: lines(changes),

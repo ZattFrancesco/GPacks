@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, stageInstance) {
     if (!stageInstance?.guildId) return;
     await sendLog(client, stageInstance.guildId, {
+      type: 'stage_instance_create',
       color: DEFAULT_COLORS.success,
       title: '🎭 Stage créé',
       description: lines([

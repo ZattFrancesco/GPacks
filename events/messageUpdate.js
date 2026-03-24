@@ -10,6 +10,7 @@ module.exports = {
     if (before === after) return;
 
     await sendLog(client, newMessage.guildId, {
+      type: 'message_update',
       color: DEFAULT_COLORS.warning,
       title: '✏️ Message modifié',
       description: lines([

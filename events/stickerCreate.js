@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, sticker) {
     if (!sticker?.guild?.id) return;
     await sendLog(client, sticker.guild.id, {
+      type: 'sticker_create',
       color: DEFAULT_COLORS.success,
       title: '🪄 Sticker créé',
       description: lines([

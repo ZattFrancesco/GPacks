@@ -21,6 +21,7 @@ module.exports = {
         if (silentMuted) {
           await sendLog(client, interaction.guildId, {
             color: DEFAULT_COLORS.danger,
+            type: 'silent_mute',
             title: "🔕 Silent-mute interaction bloquée",
             description: lines([
               `**Utilisateur** : ${userLabel(interaction.user)}`,
@@ -79,6 +80,7 @@ module.exports = {
 
         await sendLog(client, interaction.guildId, {
           color: DEFAULT_COLORS.info,
+          type: 'slash_command',
           title: "💻 Commande slash exécutée",
           description: lines([
             `**Utilisateur** : ${userLabel(interaction.user)}`,
@@ -113,6 +115,7 @@ module.exports = {
       logger.error(`interactionCreate error: ${err?.stack || err}`);
       await sendLog(client, interaction.guildId, {
         color: DEFAULT_COLORS.danger,
+        type: 'interaction_error',
         title: "❌ Erreur interaction",
         description: lines([
           `**Utilisateur** : ${interaction?.user ? userLabel(interaction.user) : "—"}`,

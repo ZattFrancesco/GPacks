@@ -7,6 +7,7 @@ module.exports = {
     if (!channel?.guild?.id) return;
     const entry = await resolveAuditEntry(channel.guild, AuditLogEvent.ChannelCreate, channel.id);
     await sendLog(client, channel.guild.id, {
+      type: 'channel_create',
       color: DEFAULT_COLORS.success,
       title: '🆕 Salon créé',
       description: lines([

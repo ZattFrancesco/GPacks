@@ -151,6 +151,12 @@ async function getLogChannel(client, guildId) {
 
 async function sendLog(client, guildId, options = {}) {
   try {
+    const typeKey = options.type ? String(options.type) : null;
+    if (typeKey) {
+      const enabled = await logsDb.isTypeEnabled(guildId, typeKey).catch(() => true);
+      if (!enabled) return false;
+    }
+
     const channel = await getLogChannel(client, guildId);
     if (!channel) return false;
 

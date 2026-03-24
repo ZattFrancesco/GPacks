@@ -56,6 +56,7 @@ module.exports = {
       : null;
 
     await sendLog(client, newMember.guild.id, {
+      type: 'guild_member_update',
       color: DEFAULT_COLORS.warning,
       title: '👤 Membre mis à jour',
       description: lines([

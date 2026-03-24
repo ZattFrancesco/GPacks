@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, thread, newlyCreated) {
     if (!thread?.guild?.id || !newlyCreated) return;
     await sendLog(client, thread.guild.id, {
+      type: 'thread_create',
       color: DEFAULT_COLORS.success,
       title: '🧵 Thread créé',
       description: lines([

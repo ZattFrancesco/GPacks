@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, sticker) {
     if (!sticker?.guild?.id) return;
     await sendLog(client, sticker.guild.id, {
+      type: 'sticker_delete',
       color: DEFAULT_COLORS.danger,
       title: '🗑️ Sticker supprimé',
       description: lines([

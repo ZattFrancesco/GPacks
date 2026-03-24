@@ -12,6 +12,7 @@ module.exports = {
     );
 
     await sendLog(client, member.guild.id, {
+      type: 'guild_member_remove',
       color: kickEntry ? DEFAULT_COLORS.danger : DEFAULT_COLORS.warning,
       title: kickEntry ? '🥾 Membre expulsé' : '📤 Membre parti',
       description: lines([

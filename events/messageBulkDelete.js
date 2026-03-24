@@ -9,6 +9,7 @@ module.exports = {
     if (!guildId) return;
 
     await sendLog(client, guildId, {
+      type: 'message_bulk_delete',
       color: DEFAULT_COLORS.danger,
       title: '🧹 Suppression massive de messages',
       description: lines([

@@ -5,6 +5,7 @@ module.exports = {
   once: false,
   async execute(client, emoji) {
     await sendLog(client, emoji.guild.id, {
+      type: 'guild_emoji_create',
       color: DEFAULT_COLORS.success,
       title: '😀 Emoji créé',
       description: lines([

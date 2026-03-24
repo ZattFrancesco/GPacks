@@ -5,6 +5,7 @@ module.exports = {
   once: false,
   async execute(client, invite) {
     await sendLog(client, invite.guild.id, {
+      type: 'invite_create',
       color: DEFAULT_COLORS.success,
       title: '🔗 Invitation créée',
       description: lines([

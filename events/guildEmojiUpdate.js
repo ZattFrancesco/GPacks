@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, oldEmoji, newEmoji) {
     if (oldEmoji.name === newEmoji.name) return;
     await sendLog(client, newEmoji.guild.id, {
+      type: 'guild_emoji_update',
       color: DEFAULT_COLORS.warning,
       title: '🛠️ Emoji mis à jour',
       description: lines([

@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, role) {
     const entry = await resolveAuditEntry(role.guild, AuditLogEvent.RoleDelete, role.id);
     await sendLog(client, role.guild.id, {
+      type: 'role_delete',
       color: DEFAULT_COLORS.danger,
       title: '🗑️ Rôle supprimé',
       description: lines([

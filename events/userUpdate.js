@@ -11,6 +11,7 @@ module.exports = {
     if (!changes.length) return;
 
     await sendUserUpdateToMutualGuilds(client, newUser, {
+      type: 'user_update',
       color: DEFAULT_COLORS.info,
       title: '🌐 Profil utilisateur mis à jour',
       description: lines([

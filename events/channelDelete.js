@@ -7,6 +7,7 @@ module.exports = {
     if (!channel?.guild?.id) return;
     const entry = await resolveAuditEntry(channel.guild, AuditLogEvent.ChannelDelete, channel.id);
     await sendLog(client, channel.guild.id, {
+      type: 'channel_delete',
       color: DEFAULT_COLORS.danger,
       title: '🗑️ Salon supprimé',
       description: lines([

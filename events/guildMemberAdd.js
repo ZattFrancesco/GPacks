@@ -5,6 +5,7 @@ module.exports = {
   once: false,
   async execute(client, member) {
     await sendLog(client, member.guild.id, {
+      type: 'guild_member_add',
       color: DEFAULT_COLORS.success,
       title: '📥 Membre rejoint',
       description: lines([

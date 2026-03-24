@@ -14,6 +14,7 @@ module.exports = {
     if (!changes.length) return;
 
     await sendLog(client, newEvent.guildId, {
+      type: 'guild_scheduled_event_update',
       color: DEFAULT_COLORS.warning,
       title: '🛠️ Événement planifié mis à jour',
       description: lines(changes),

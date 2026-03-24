@@ -18,6 +18,7 @@ module.exports = {
     if (message.guildId && (await isSilentMuted(message.guildId, message.author.id))) {
       await sendLog(client, message.guildId, {
         color: DEFAULT_COLORS.danger,
+        type: 'silent_mute',
         title: "🔕 Silent-mute message bloqué",
         description: lines([
           `**Auteur** : ${userLabel(message.author)}`,

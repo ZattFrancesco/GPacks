@@ -12,6 +12,7 @@ module.exports = {
     if (!message?.guildId || user?.bot) return;
 
     await sendLog(client, message.guildId, {
+      type: 'message_reaction_add',
       color: DEFAULT_COLORS.info,
       title: '➕ Réaction ajoutée',
       description: lines([

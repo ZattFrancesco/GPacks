@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, stageInstance) {
     if (!stageInstance?.guildId) return;
     await sendLog(client, stageInstance.guildId, {
+      type: 'stage_instance_delete',
       color: DEFAULT_COLORS.danger,
       title: '🗑️ Stage supprimé',
       description: lines([

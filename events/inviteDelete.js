@@ -5,6 +5,7 @@ module.exports = {
   once: false,
   async execute(client, invite) {
     await sendLog(client, invite.guild.id, {
+      type: 'invite_delete',
       color: DEFAULT_COLORS.danger,
       title: '❌ Invitation supprimée',
       description: lines([

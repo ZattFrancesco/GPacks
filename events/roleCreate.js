@@ -6,6 +6,7 @@ module.exports = {
   async execute(client, role) {
     const entry = await resolveAuditEntry(role.guild, AuditLogEvent.RoleCreate, role.id);
     await sendLog(client, role.guild.id, {
+      type: 'role_create',
       color: DEFAULT_COLORS.success,
       title: '🆕 Rôle créé',
       description: lines([
