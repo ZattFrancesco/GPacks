@@ -24,7 +24,7 @@ module.exports = {
           logger.warn(`Autorole nettoyé automatiquement: rôle ${cfg.roleId} introuvable sur ${member.guild.id}`);
         } else if (!role.managed && role.editable) {
           try {
-            await member.roles.add(role, 'Autorole automatique à l'arrivée');
+            await member.roles.add(role, { reason: "Autorole automatique à l'arrivée" });
           } catch (err) {
             logger.warn(`Impossible d'attribuer l'autorole ${role.id} à ${member.user?.tag || member.id}: ${err?.message || err}`);
           }
