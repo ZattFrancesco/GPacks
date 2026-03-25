@@ -13,7 +13,7 @@ function parseTypeList(raw) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("ticket-panel-create")
-    .setDescription("Créer / mettre à jour un panel de tickets")
+    .setDescription("Créer un Panel de Tickets")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addStringOption((o) => o.setName("id").setDescription("ID du panel").setRequired(true))
     .addChannelOption((o) => o.setName("channel").setDescription("Salon où poster le panel").setRequired(true))

@@ -1,9 +1,11 @@
 const { sendLog, DEFAULT_COLORS, lines, resolveAuditEntry, AuditLogEvent } = require('../src/utils/discordLogs');
+const autoroleDb = require('../services/autorole.db');
 
 module.exports = {
   name: 'roleDelete',
   once: false,
   async execute(client, role) {
+    await autoroleDb.clearAutoroleIfMatches(role.guild.id, role.id).catch(() => null);
     const entry = await resolveAuditEntry(role.guild, AuditLogEvent.RoleDelete, role.id);
     await sendLog(client, role.guild.id, {
       type: 'role_delete',
