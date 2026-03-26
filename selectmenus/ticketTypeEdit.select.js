@@ -9,7 +9,7 @@ const {
   ButtonStyle,
 } = require("discord.js");
 
-const { getType, updateType } = require("../services/tickets.db");
+const { getType, updateType, listTypes } = require("../services/tickets.db");
 const { buildTypeEditView } = require("../src/utils/ticketTypeEditView");
 const { refreshPanelsUsingType } = require("../src/utils/refreshTicketPanels");
 const { setTypeCreateDraft } = require("../src/utils/ticketDrafts");
@@ -35,18 +35,31 @@ module.exports = {
   idPrefix: "tickettype:edit:",
   async execute(interaction) {
     const guildId = interaction.guildId;
-    const parts = String(interaction.customId).split(":");
+    const customId = String(interaction.customId || "");
+    const parts = customId.split(":");
 
-    // tickettype:edit:field:<typeId>
-    // tickettype:edit:category:<typeId>
-    // tickettype:edit:roles:<typeId>
-    // tickettype:edit:openping:<typeId>
-    const kind = parts[2];
-    const typeId = parts[3];
+    const kind = parts[2] || null;
+    const typeId = parts.slice(3).join(":").trim();
 
-    const type = await getType(guildId, typeId);
+    console.log("[tickettype:edit] customId =", customId);
+    console.log("[tickettype:edit] kind =", kind, "| typeId =", typeId, "| guildId =", guildId);
+
+    if (!guildId || !kind || !typeId) {
+      return interaction.reply({ content: "❌ Identifiant invalide.", flags: 64 });
+    }
+
+    let type = await getType(guildId, typeId);
     if (!type) {
-      return interaction.reply({ content: "❌ Type introuvable.", flags: 64 });
+      const allTypes = await listTypes(guildId).catch(() => []);
+      console.log(
+        "[tickettype:edit] type introuvable. Types dispo =",
+        (allTypes || []).map((t) => t.id)
+      );
+      return interaction.reply({
+        content: `❌ Type introuvable.
+ID reçu: \`${typeId}\``,
+        flags: 64,
+      });
     }
 
     // 1) Menu principal : choisir le champ
@@ -170,8 +183,8 @@ module.exports = {
       const catId = interaction.values?.[0];
       await updateType(guildId, type.id, { category_opened_id: catId || null });
       await refreshPanelsUsingType(interaction.guild, type.id);
-      const fresh = await getType(guildId, type.id);
-      const view = buildTypeEditView(interaction.guild, fresh);
+      type = await getType(guildId, type.id);
+      const view = buildTypeEditView(interaction.guild, type);
       return interaction.update({ ...view });
     }
 
@@ -180,8 +193,8 @@ module.exports = {
       const roleIds = (interaction.values || []).filter(Boolean);
       await updateType(guildId, type.id, { staff_role_ids_json: JSON.stringify(roleIds) });
       await refreshPanelsUsingType(interaction.guild, type.id);
-      const fresh = await getType(guildId, type.id);
-      const view = buildTypeEditView(interaction.guild, fresh);
+      type = await getType(guildId, type.id);
+      const view = buildTypeEditView(interaction.guild, type);
       return interaction.update({ ...view });
     }
 
@@ -190,8 +203,8 @@ module.exports = {
       const roleId = interaction.values?.[0] || null;
       await updateType(guildId, type.id, { open_ping_role_id: roleId });
       await refreshPanelsUsingType(interaction.guild, type.id);
-      const fresh = await getType(guildId, type.id);
-      const view = buildTypeEditView(interaction.guild, fresh);
+      type = await getType(guildId, type.id);
+      const view = buildTypeEditView(interaction.guild, type);
       return interaction.update({ ...view });
     }
 
