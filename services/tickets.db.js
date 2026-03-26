@@ -319,6 +319,18 @@ async function getPanelByMessage(guildId, messageId) {
   return { ...r, type_ids: safeJsonParse(r.type_ids_json, []) };
 }
 
+async function listPanels(guildId) {
+  await ensureTables();
+  const rows = await query(
+    `SELECT * FROM doj_ticket_panels WHERE guild_id = ? ORDER BY id ASC`,
+    [guildId]
+  );
+  return (rows || []).map((r) => ({
+    ...r,
+    type_ids: safeJsonParse(r.type_ids_json, []),
+  }));
+}
+
 async function deletePanel(guildId, panelId) {
   await ensureTables();
   const id = normalizeId(panelId);
@@ -452,6 +464,7 @@ module.exports = {
   updatePanel,
   getPanel,
   getPanelByMessage,
+  listPanels,
   deletePanel,
 
   // Tickets

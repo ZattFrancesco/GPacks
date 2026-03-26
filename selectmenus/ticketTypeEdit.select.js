@@ -11,6 +11,7 @@ const {
 
 const { getType, updateType } = require("../services/tickets.db");
 const { buildTypeEditView } = require("../src/utils/ticketTypeEditView");
+const { refreshPanelsUsingType } = require("../src/utils/refreshTicketPanels");
 const { setTypeCreateDraft } = require("../src/utils/ticketDrafts");
 
 function buildBackRow(typeId) {
@@ -168,6 +169,7 @@ module.exports = {
     if (kind === "category") {
       const catId = interaction.values?.[0];
       await updateType(guildId, type.id, { category_opened_id: catId || null });
+      await refreshPanelsUsingType(interaction.guild, type.id);
       const fresh = await getType(guildId, type.id);
       const view = buildTypeEditView(interaction.guild, fresh);
       return interaction.update({ ...view });
@@ -177,6 +179,7 @@ module.exports = {
     if (kind === "roles") {
       const roleIds = (interaction.values || []).filter(Boolean);
       await updateType(guildId, type.id, { staff_role_ids_json: JSON.stringify(roleIds) });
+      await refreshPanelsUsingType(interaction.guild, type.id);
       const fresh = await getType(guildId, type.id);
       const view = buildTypeEditView(interaction.guild, fresh);
       return interaction.update({ ...view });
@@ -186,6 +189,7 @@ module.exports = {
     if (kind === "openping") {
       const roleId = interaction.values?.[0] || null;
       await updateType(guildId, type.id, { open_ping_role_id: roleId });
+      await refreshPanelsUsingType(interaction.guild, type.id);
       const fresh = await getType(guildId, type.id);
       const view = buildTypeEditView(interaction.guild, fresh);
       return interaction.update({ ...view });

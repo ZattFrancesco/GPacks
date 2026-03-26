@@ -2,6 +2,7 @@ const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = req
 
 const { getTypeCreateDraft, clearTypeCreateDraft } = require("../src/utils/ticketDrafts");
 const { createType, updateType } = require("../services/tickets.db");
+const { refreshPanelsUsingType } = require("../src/utils/refreshTicketPanels");
 
 module.exports = {
   id: "tickettype:customembed",
@@ -64,6 +65,7 @@ module.exports = {
         custom_embed_title: enabled ? title : null,
         custom_embed_description: enabled ? description : null,
       });
+      await refreshPanelsUsingType(interaction.guild, draft.id);
       return interaction.reply({ content: "✅ Custom embed mis à jour.", flags: 64 });
     }
 

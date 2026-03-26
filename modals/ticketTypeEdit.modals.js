@@ -7,6 +7,7 @@ const {
 
 const { getType, updateType } = require("../services/tickets.db");
 const { buildTypeEditView } = require("../src/utils/ticketTypeEditView");
+const { refreshPanelsUsingType } = require("../src/utils/refreshTicketPanels");
 
 function build(type, field) {
   const modal = new ModalBuilder().setCustomId(`tickettype:edit:modal:${type.id}:${field}`);
@@ -55,9 +56,11 @@ module.exports = {
       const label = interaction.fields.getTextInputValue("label")?.trim();
       if (!label) return interaction.reply({ content: "❌ Label invalide.", flags: 64 });
       await updateType(guildId, type.id, { label });
+      await refreshPanelsUsingType(interaction.guild, type.id);
     } else if (field === "emoji") {
       const emoji = (interaction.fields.getTextInputValue("emoji") || "").trim();
       await updateType(guildId, type.id, { emoji: emoji || null });
+      await refreshPanelsUsingType(interaction.guild, type.id);
     } else {
       return interaction.reply({ content: "❌ Champ non géré.", flags: 64 });
     }

@@ -1,5 +1,6 @@
 const { getType, updateType } = require("../services/tickets.db");
 const { buildTypeEditView } = require("../src/utils/ticketTypeEditView");
+const { refreshPanelsUsingType } = require("../src/utils/refreshTicketPanels");
 
 module.exports = {
   idPrefix: "tickettype:edit:toggle:",
@@ -18,6 +19,7 @@ module.exports = {
     if (key === "namemodalrename") {
       const v = value === "1" ? 1 : 0;
       await updateType(guildId, type.id, { namemodalrename: v });
+      await refreshPanelsUsingType(interaction.guild, type.id);
       const fresh = await getType(guildId, type.id);
       const view = buildTypeEditView(interaction.guild, fresh);
       return interaction.update({ ...view });
@@ -27,6 +29,7 @@ module.exports = {
       // value "0" => disable
       const v = value && value !== "0" ? String(value) : null;
       await updateType(guildId, type.id, { open_ping_role_id: v });
+      await refreshPanelsUsingType(interaction.guild, type.id);
       const fresh = await getType(guildId, type.id);
       const view = buildTypeEditView(interaction.guild, fresh);
       return interaction.update({ ...view });
