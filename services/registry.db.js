@@ -1,12 +1,58 @@
 // services/registry.db.js
 const { query } = require("./db");
 
+let registryTablesReady = false;
+
+async function ensureRegistryTables() {
+  if (registryTablesReady) return;
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS registry_items (
+      item_key VARCHAR(191) NOT NULL,
+      type VARCHAR(50) NOT NULL,
+      category_name VARCHAR(191) NOT NULL DEFAULT 'General',
+      default_name VARCHAR(191) NOT NULL,
+      default_description TEXT NULL,
+      PRIMARY KEY (item_key)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS registry_item_overrides (
+      item_key VARCHAR(191) NOT NULL,
+      category_key VARCHAR(191) NULL,
+      label_override VARCHAR(191) NULL,
+      description_override TEXT NULL,
+      is_hidden TINYINT(1) NOT NULL DEFAULT 0,
+      sort_index INT NOT NULL DEFAULT 0,
+      PRIMARY KEY (item_key),
+      KEY idx_registry_item_overrides_category_key (category_key)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS help_categories (
+      category_key VARCHAR(191) NOT NULL,
+      display_name VARCHAR(191) NOT NULL,
+      emoji VARCHAR(50) NULL,
+      color VARCHAR(32) NULL,
+      sort_order INT NOT NULL DEFAULT 0,
+      is_hidden TINYINT(1) NOT NULL DEFAULT 0,
+      PRIMARY KEY (category_key)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  registryTablesReady = true;
+}
+
 /**
  * Upsert (insert/update) d'un item dans registry_items
  * + garantit qu'une ligne existe aussi dans registry_item_overrides
  * @param {{ item_key: string, type: string, default_name: string, default_description?: string|null, category_name?: string|null }} item
  */
 async function upsertRegistryItem(item) {
+  await ensureRegistryTables();
+
   // NOTE: la table registry_items contient un champ NOT NULL `category_name`.
   // Si tu ne le fournis pas, MySQL refusera l'INSERT (ER_NO_DEFAULT_FOR_FIELD).
   // On force donc une valeur par défaut.
@@ -46,6 +92,8 @@ async function upsertRegistryItem(item) {
  * @returns {Promise<string|null>}
  */
 async function getGlobalCategoryForItem(itemKey) {
+  await ensureRegistryTables();
+
   if (!itemKey) return null;
 
   const rows = await query(
@@ -61,6 +109,7 @@ async function getGlobalCategoryForItem(itemKey) {
 }
 
 module.exports = {
+  ensureRegistryTables,
   upsertRegistryItem,
   getGlobalCategoryForItem,
 };
