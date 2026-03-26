@@ -13,6 +13,7 @@ const { getType, updateType, listTypes } = require("../services/tickets.db");
 const { buildTypeEditView } = require("../src/utils/ticketTypeEditView");
 const { refreshPanelsUsingType } = require("../src/utils/refreshTicketPanels");
 const { setTypeCreateDraft } = require("../src/utils/ticketDrafts");
+const { setTypeEditSession } = require("../src/utils/ticketTypeEditSessions");
 
 function buildBackRow(typeId) {
   const menu = new StringSelectMenuBuilder()
@@ -65,6 +66,14 @@ ID reçu: \`${typeId}\``, flags: 64 });
 
       // --- label / emoji => modal
       if (choice === "label" || choice === "emoji") {
+        setTypeEditSession({
+          guildId,
+          userId: interaction.user.id,
+          typeId: type.id,
+          field: choice,
+          channelId: interaction.channelId || interaction.channel?.id || null,
+          messageId: interaction.message?.id || null,
+        });
         const modal = require("../modals/ticketTypeEdit.modals");
         return interaction.showModal(modal.build(type, choice));
       }

@@ -8,6 +8,7 @@ const {
 const { getType, updateType, listTypes } = require("../services/tickets.db");
 const { buildTypeEditView } = require("../src/utils/ticketTypeEditView");
 const { refreshPanelsUsingType } = require("../src/utils/refreshTicketPanels");
+const { getTypeEditSession, clearTypeEditSession } = require("../src/utils/ticketTypeEditSessions");
 
 function build(type, field) {
   const modal = new ModalBuilder().setCustomId(`tickettype:edit:modal:${type.id}:${field}`);
@@ -80,6 +81,41 @@ ID reçu: \`${typeId}\``, flags: 64 });
 
     const fresh = await getType(guildId, type.id);
     const view = buildTypeEditView(interaction.guild, fresh);
+
+    const session = getTypeEditSession({
+      guildId,
+      userId: interaction.user.id,
+      typeId: type.id,
+      field,
+    });
+
+    let dashboardUpdated = false;
+    if (session?.channelId && session?.messageId) {
+      try {
+        const channel = await interaction.guild.channels.fetch(session.channelId).catch(() => null);
+        if (channel && typeof channel.messages?.fetch === "function") {
+          const message = await channel.messages.fetch(session.messageId).catch(() => null);
+          if (message) {
+            await message.edit({ ...view });
+            dashboardUpdated = true;
+          }
+        }
+      } catch (err) {
+        console.error("[tickettype:edit:modal] impossible d'éditer le dashboard:", err);
+      }
+    }
+
+    clearTypeEditSession({
+      guildId,
+      userId: interaction.user.id,
+      typeId: type.id,
+      field,
+    });
+
+    if (dashboardUpdated) {
+      return interaction.reply({ content: "✅ Type mis à jour.", flags: 64 });
+    }
+
     return interaction.reply({ ...view, flags: 64 });
   },
 };
