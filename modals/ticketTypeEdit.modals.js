@@ -5,7 +5,7 @@ const {
   ActionRowBuilder,
 } = require("discord.js");
 
-const { getType, updateType } = require("../services/tickets.db");
+const { getType, updateType, listTypes } = require("../services/tickets.db");
 const { buildTypeEditView } = require("../src/utils/ticketTypeEditView");
 const { refreshPanelsUsingType } = require("../src/utils/refreshTicketPanels");
 
@@ -45,12 +45,25 @@ module.exports = {
 
   async execute(interaction) {
     const guildId = interaction.guildId;
-    const parts = String(interaction.customId).split(":");
-    const typeId = parts[4];
-    const field = parts[5];
+    const customId = String(interaction.customId || "");
+    const parts = customId.split(":");
+    const field = parts[parts.length - 1] || null;
+    const typeId = parts.slice(3, -1).join(":").trim();
+
+    console.log("[tickettype:edit:modal] customId =", customId);
+    console.log("[tickettype:edit:modal] field =", field, "| typeId =", typeId, "| guildId =", guildId);
+
+    if (!guildId || !field || !typeId) {
+      return interaction.reply({ content: "❌ Identifiant invalide.", flags: 64 });
+    }
 
     const type = await getType(guildId, typeId);
-    if (!type) return interaction.reply({ content: "❌ Type introuvable.", flags: 64 });
+    if (!type) {
+      const allTypes = await listTypes(guildId).catch(() => []);
+      console.log("[tickettype:edit:modal] type introuvable. Types dispo =", (allTypes || []).map((t) => t.id));
+      return interaction.reply({ content: `❌ Type introuvable.
+ID reçu: \`${typeId}\``, flags: 64 });
+    }
 
     if (field === "label") {
       const label = interaction.fields.getTextInputValue("label")?.trim();
