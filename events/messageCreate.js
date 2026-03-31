@@ -8,12 +8,20 @@ const { isOwner } = require("../src/utils/permissions");
 const { isBlacklisted } = require("../services/blacklist.db");
 const { isSilentMuted } = require("../services/silentMute.db");
 const { sendLog, DEFAULT_COLORS, lines, userLabel, channelLabel, trim } = require("../src/utils/discordLogs");
+const { forwardDmToThread } = require("../src/utils/modmail");
 
 module.exports = {
   name: "messageCreate",
   once: false,
   async execute(client, message) {
     if (!message || message.author?.bot) return;
+
+    if (!message.guildId) {
+      await forwardDmToThread(client, message).catch((err) => {
+        logger.error(`Modmail DM forward error: ${err?.stack || err}`);
+      });
+      return;
+    }
 
     if (message.guildId && (await isSilentMuted(message.guildId, message.author.id))) {
       await sendLog(client, message.guildId, {
