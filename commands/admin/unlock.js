@@ -28,12 +28,12 @@ function normalizeOverwrite(raw) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('unlock')
-    .setDescription('Restore un salon locké avec ses permissions exactes d’avant lock')
+    .setDescription('Déverrouiller un salon')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addChannelOption((option) =>
       option
         .setName('channel')
-        .setDescription('Salon à unlock')
+        .setDescription('Salon ciblé')
         .setRequired(true)
         .addChannelTypes(
           ChannelType.GuildText,

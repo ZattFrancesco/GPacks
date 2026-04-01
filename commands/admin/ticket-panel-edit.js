@@ -22,7 +22,7 @@ function buildEditMenu(panelId) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("ticket-panel-edit")
-    .setDescription("Modifier un panel via un menu (select + modal)")
+    .setDescription("Modifier un panel")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addStringOption((o) => o.setName("id").setDescription("ID du panel").setRequired(true)),
 

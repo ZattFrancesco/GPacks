@@ -44,7 +44,7 @@ function buildEmbedsFromLines(title, lines, color = 0x2b2d31) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("types-list")
-    .setDescription("Liste tous les types de tickets (par serveur)")
+    .setDescription("Lister les types de tickets")
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
   async execute(interaction) {

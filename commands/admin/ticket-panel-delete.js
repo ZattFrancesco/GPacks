@@ -4,7 +4,7 @@ const { getPanel, deletePanel } = require("../../services/tickets.db");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("ticket-panel-delete")
-    .setDescription("Supprimer un panel (message + DB)")
+    .setDescription("Supprimer un panel")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addStringOption((o) => o.setName("id").setDescription("ID du panel").setRequired(true)),
 

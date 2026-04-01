@@ -4,9 +4,9 @@ const { ensureTable, getSilentMute, removeSilentMute } = require('../../services
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('silent-unmute')
-    .setDescription('Retire le silent-mute d’un utilisateur')
+    .setDescription('Retirer un silent-mute')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addUserOption((o) => o.setName('user').setDescription('Utilisateur à retirer du silent-mute').setRequired(true)),
+    .addUserOption((o) => o.setName('user').setDescription('Membre ciblé').setRequired(true)),
 
   async execute(interaction) {
     await ensureTable();

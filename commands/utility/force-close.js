@@ -31,12 +31,12 @@ function buildClosedActionsRow(ticketId) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("force-close")
-    .setDescription("Ferme un ticket sans confirmation (staff)")
+    .setDescription("Fermer un ticket")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
     .addBooleanOption((opt) =>
       opt
         .setName("delete")
-        .setDescription("Supprimer le salon après fermeture")
+        .setDescription("Supprimer le salon")
         .setRequired(false)
     ),
 

@@ -11,11 +11,11 @@ const { isOwner } = require("../../src/utils/permissions");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("pm")
-    .setDescription("Envoyer un message privé à un utilisateur via son ID")
+    .setDescription("Envoyer un DM par ID")
     .addStringOption((option) =>
       option
         .setName("id")
-        .setDescription("ID de l'utilisateur")
+        .setDescription("ID du membre")
         .setRequired(true)
     ),
 

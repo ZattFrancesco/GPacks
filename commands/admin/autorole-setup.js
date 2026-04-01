@@ -4,12 +4,12 @@ const autoroleDb = require('../../services/autorole.db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('autorole-setup')
-    .setDescription('Définit ou supprime le rôle automatique attribué à l’arrivée')
+    .setDescription('Configurer l'autorole')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addRoleOption((option) =>
       option
         .setName('role')
-        .setDescription('Rôle à attribuer automatiquement. Laisse vide pour supprimer l’autorole.')
+        .setDescription('Rôle à attribuer')
         .setRequired(false)
     ),
 

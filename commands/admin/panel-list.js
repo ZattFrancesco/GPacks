@@ -40,7 +40,7 @@ function buildEmbedsFromLines(title, lines, color = 0x2b2d31) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('panel-list')
-    .setDescription('Liste tous les panels de tickets (par serveur)')
+    .setDescription('Lister les panels de tickets')
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
   async execute(interaction) {

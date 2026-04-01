@@ -22,7 +22,7 @@ function normalizeOverwrite(raw) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('unlock-all')
-    .setDescription('Restore tous les salons lockés depuis les snapshots DB')
+    .setDescription('Déverrouiller tous les salons')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {

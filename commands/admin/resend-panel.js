@@ -15,12 +15,12 @@ const {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("resend-panel")
-    .setDescription("Reposte un panel depuis la DB et supprime l'ancien message")
+    .setDescription("Reposter un panel")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addStringOption((o) =>
       o
         .setName("id")
-        .setDescription("ID du panel à renvoyer")
+        .setDescription("ID du panel")
         .setRequired(true)
     ),
 

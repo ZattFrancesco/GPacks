@@ -3,11 +3,11 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("delete-until")
-    .setDescription("Supprime les messages jusqu'à un message spécifique")
+    .setDescription("Supprimer jusqu'à un message")
     .addStringOption(option =>
       option
         .setName("messageid")
-        .setDescription("ID du message cible")
+        .setDescription("ID du message")
         .setRequired(true)
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),

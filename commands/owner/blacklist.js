@@ -14,10 +14,10 @@ const { listBlacklisted } = require("../../services/blacklist.db");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("blacklist")
-    .setDescription("Gestion blacklist globale du bot")
-    .addSubcommand((s) => s.setName("add").setDescription("Restreint l'utilisation du bot a l'utilisateur entré."))
-    .addSubcommand((s) => s.setName("remove").setDescription("Annule la restriction de l'utilisation du bot."))
-    .addSubcommand((s) => s.setName("status").setDescription("Afficher la liste de membres restreints."))
+    .setDescription("Gérer la blacklist globale")
+    .addSubcommand((s) => s.setName("add").setDescription("Ajouter à la blacklist"))
+    .addSubcommand((s) => s.setName("remove").setDescription("Retirer de la blacklist"))
+    .addSubcommand((s) => s.setName("status").setDescription("Voir la blacklist"))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {

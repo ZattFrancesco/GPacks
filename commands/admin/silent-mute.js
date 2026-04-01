@@ -14,19 +14,19 @@ const {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('silent-mute')
-    .setDescription('Active un mute fantôme : messages supprimés, vocal coupé, interactions bot bloquées.')
+    .setDescription('Gérer les silent-mutes')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addSubcommand((s) =>
       s
         .setName('add')
-        .setDescription('Ajoute un utilisateur au silent-mute')
-        .addUserOption((o) => o.setName('user').setDescription('Utilisateur à silent-mute').setRequired(true))
-        .addStringOption((o) => o.setName('reason').setDescription('Raison interne').setRequired(false).setMaxLength(255))
+        .setDescription('Ajouter un silent-mute')
+        .addUserOption((o) => o.setName('user').setDescription('Membre ciblé').setRequired(true))
+        .addStringOption((o) => o.setName('reason').setDescription('Raison').setRequired(false).setMaxLength(255))
     )
     .addSubcommand((s) =>
       s
         .setName('status')
-        .setDescription('Affiche la liste des silent-mutes du serveur')
+        .setDescription('Lister les silent-mutes')
     ),
 
   async execute(interaction) {

@@ -5,25 +5,25 @@ const { setTypeCreateDraft } = require("../../src/utils/ticketDrafts");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("ticket-type-create")
-    .setDescription("Créer / mettre à jour un type de ticket")
+    .setDescription("Créer un type de ticket")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 
     // ✅ REQUIRED D'ABORD (obligatoires en premier)
-    .addStringOption((o) => o.setName("id").setDescription("ID unique (ex: plainte)").setRequired(true))
-    .addStringOption((o) => o.setName("label").setDescription("Label visible").setRequired(true))
+    .addStringOption((o) => o.setName("id").setDescription("ID du type").setRequired(true))
+    .addStringOption((o) => o.setName("label").setDescription("Nom affiché").setRequired(true))
     .addChannelOption((o) =>
       o
         .setName("categoryopened")
-        .setDescription("Catégorie où créer les tickets")
+        .setDescription("Catégorie des tickets")
         .addChannelTypes(4) // GuildCategory
         .setRequired(true)
     )
-    .addRoleOption((o) => o.setName("staffrole1").setDescription("Rôle staff 1").setRequired(true))
+    .addRoleOption((o) => o.setName("staffrole1").setDescription("Rôle staff principal").setRequired(true))
 
     // ✅ ENSUITE les optionnels
-    .addStringOption((o) => o.setName("emoji").setDescription("Emoji (optionnel)").setRequired(false))
+    .addStringOption((o) => o.setName("emoji").setDescription("Emoji").setRequired(false))
     .addBooleanOption((o) =>
-      o.setName("namemodalrename").setDescription("Demander Nom/Prénom + changer pseudo").setRequired(false)
+      o.setName("namemodalrename").setDescription("Demander nom et prénom").setRequired(false)
     )
     .addRoleOption((o) => o.setName("staffrole2").setDescription("Rôle staff 2").setRequired(false))
     .addRoleOption((o) => o.setName("staffrole3").setDescription("Rôle staff 3").setRequired(false))
@@ -32,10 +32,10 @@ module.exports = {
     .addRoleOption((o) =>
       o
         .setName("openpingrole")
-        .setDescription("Rôle à ping à l'ouverture du ticket (optionnel)")
+        .setDescription("Rôle à mentionner")
         .setRequired(false)
     )
-    .addBooleanOption((o) => o.setName("customembed").setDescription("Activer l'embed custom (modal)").setRequired(false)),
+    .addBooleanOption((o) => o.setName("customembed").setDescription("Activer l'embed custom").setRequired(false)),
 
   async execute(interaction) {
     const guildId = interaction.guildId;

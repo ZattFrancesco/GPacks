@@ -36,12 +36,12 @@ function canBeLocked(channel) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('lock')
-    .setDescription('Lock un salon en cachant sa vue au rôle @everyone')
+    .setDescription('Verrouiller un salon')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addChannelOption((option) =>
       option
         .setName('channel')
-        .setDescription('Salon à lock')
+        .setDescription('Salon ciblé')
         .setRequired(true)
         .addChannelTypes(
           ChannelType.GuildText,

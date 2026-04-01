@@ -107,23 +107,23 @@ function buildDashboardPayload(guild, cfg, selectedGroupKey) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('config-logs')
-    .setDescription('Configure le salon et le dashboard des logs du serveur')
+    .setDescription('Gérer les logs du serveur')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addSubcommand((s) =>
       s
         .setName('set')
-        .setDescription('Définit le salon de logs')
+        .setDescription('Définir le salon des logs')
         .addChannelOption((o) =>
           o
             .setName('channel')
-            .setDescription('Salon textuel pour recevoir les logs')
+            .setDescription('Salon des logs')
             .setRequired(true)
             .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
         )
     )
-    .addSubcommand((s) => s.setName('dashboard').setDescription('Ouvre le dashboard interactif des logs'))
-    .addSubcommand((s) => s.setName('status').setDescription('Affiche la configuration actuelle'))
-    .addSubcommand((s) => s.setName('disable').setDescription('Désactive les logs du serveur')),
+    .addSubcommand((s) => s.setName('dashboard').setDescription('Ouvrir le dashboard'))
+    .addSubcommand((s) => s.setName('status').setDescription('Voir la configuration'))
+    .addSubcommand((s) => s.setName('disable').setDescription('Désactiver les logs')),
 
   buildDashboardPayload,
 

@@ -13,29 +13,29 @@ function parseTypeList(raw) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("ticket-panel-create")
-    .setDescription("Créer un Panel de Tickets")
+    .setDescription("Créer un panel de tickets")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addStringOption((o) => o.setName("id").setDescription("ID du panel").setRequired(true))
-    .addChannelOption((o) => o.setName("channel").setDescription("Salon où poster le panel").setRequired(true))
-    .addStringOption((o) => o.setName("title").setDescription("Titre embed").setRequired(true))
-    .addStringOption((o) => o.setName("description").setDescription("Description embed").setRequired(true))
+    .addChannelOption((o) => o.setName("channel").setDescription("Salon du panel").setRequired(true))
+    .addStringOption((o) => o.setName("title").setDescription("Titre du panel").setRequired(true))
+    .addStringOption((o) => o.setName("description").setDescription("Description du panel").setRequired(true))
     .addStringOption((o) =>
       o
         .setName("types")
-        .setDescription("IDs des types autorisés (séparés par espaces/virgules)")
+        .setDescription("IDs des types autorisés")
         .setRequired(true)
     )
     .addStringOption((o) =>
       o
         .setName("style")
-        .setDescription("Affichage")
+        .setDescription("Mode d'affichage")
         .addChoices({ name: "menu", value: "menu" }, { name: "boutons", value: "boutons" })
         .setRequired(false)
     )
-    .addIntegerOption((o) => o.setName("color").setDescription("Couleur (nombre, ex: 16711680)").setRequired(false))
-    .addRoleOption((o) => o.setName("required_role").setDescription("Rôle minimum pour ouvrir").setRequired(false))
-    .addStringOption((o) => o.setName("logo_url").setDescription("Thumbnail URL").setRequired(false))
-    .addStringOption((o) => o.setName("banner_url").setDescription("Image URL").setRequired(false)),
+    .addIntegerOption((o) => o.setName("color").setDescription("Couleur du panel").setRequired(false))
+    .addRoleOption((o) => o.setName("required_role").setDescription("Rôle requis").setRequired(false))
+    .addStringOption((o) => o.setName("logo_url").setDescription("URL du logo").setRequired(false))
+    .addStringOption((o) => o.setName("banner_url").setDescription("URL de la bannière").setRequired(false)),
 
   async execute(interaction) {
     // DB + envoi de message peuvent dépasser le délai de réponse Discord.

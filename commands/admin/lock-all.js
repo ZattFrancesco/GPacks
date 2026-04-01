@@ -36,7 +36,7 @@ function canBeLocked(channel) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('lock-all')
-    .setDescription('Lock tous les salons du serveur avec snapshot DB')
+    .setDescription('Verrouiller tous les salons')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {

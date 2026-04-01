@@ -6,7 +6,7 @@ const { buildTypeEditView } = require("../../src/utils/ticketTypeEditView");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("ticket-type-edit")
-    .setDescription("Modifier un type de ticket (menu interactif)")
+    .setDescription("Modifier un type de ticket")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     // ✅ required en premier
     .addStringOption((o) => o.setName("id").setDescription("ID du type").setRequired(true)),
