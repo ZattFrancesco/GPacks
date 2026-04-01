@@ -4,7 +4,7 @@ const autoroleDb = require('../../services/autorole.db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('autorole-setup')
-    .setDescription('Configurer l'autorole')
+    .setDescription('Configurer l\'autorole')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addRoleOption((option) =>
       option
