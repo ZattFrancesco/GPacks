@@ -105,13 +105,17 @@ const LOG_TYPE_LABELS = Object.fromEntries(
 );
 const ALL_LOG_TYPES = LOG_TYPE_GROUPS.flatMap((group) => group.types.map(([key]) => key));
 
+let _ensured = false;
+
 async function ensureTable() {
+  if (_ensured) return;
   try {
     await query(TABLE_SQL);
     const columns = await query('SHOW COLUMNS FROM logs_config LIKE "enabled_types_json"');
     if (!columns?.length) {
       await query('ALTER TABLE logs_config ADD COLUMN enabled_types_json LONGTEXT NULL AFTER channel_id');
     }
+    _ensured = true;
   } catch (err) {
     logger.warn(`logs.db ensureTable: ${err?.message || err}`);
   }

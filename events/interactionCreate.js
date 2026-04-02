@@ -10,6 +10,7 @@ const handleContext = require("../handlers/contextMenuHandler");
 
 const { checkPermsDb, deny } = require("../src/utils/permissionGuardDb");
 const { isSilentMuted } = require("../services/silentMute.db");
+const { isOwner } = require("../src/utils/permissions");
 
 module.exports = {
   name: "interactionCreate",
@@ -77,6 +78,11 @@ module.exports = {
       if (interaction.isChatInputCommand()) {
         const cmd = client.commands.get(interaction.commandName);
         if (!cmd) return;
+
+        // Guard central ownerOnly
+        if (cmd.ownerOnly && !isOwner(interaction.user.id)) {
+          return interaction.reply({ content: "❌ Cette commande est réservée au propriétaire du bot.", flags: 64 });
+        }
 
         await sendLog(client, interaction.guildId, {
           color: DEFAULT_COLORS.info,

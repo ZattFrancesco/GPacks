@@ -12,9 +12,13 @@ CREATE TABLE IF NOT EXISTS bot_blacklist (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 `;
 
+let _ensured = false;
+
 async function ensureTable() {
+  if (_ensured) return;
   try {
     await query(TABLE_SQL);
+    _ensured = true;
   } catch (err) {
     logger.warn(`Blacklist ensureTable: ${err?.message || err}`);
   }

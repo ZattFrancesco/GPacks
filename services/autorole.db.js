@@ -10,9 +10,13 @@ CREATE TABLE IF NOT EXISTS guild_autoroles (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 `;
 
+let _ensured = false;
+
 async function ensureTable() {
+  if (_ensured) return;
   try {
     await query(TABLE_SQL);
+    _ensured = true;
   } catch (err) {
     logger.warn(`autorole.db ensureTable: ${err?.message || err}`);
   }

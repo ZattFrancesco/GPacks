@@ -17,9 +17,13 @@ module.exports = {
     if (!message || message.author?.bot) return;
 
     if (!message.guildId) {
-      await forwardDmToThread(client, message).catch((err) => {
+      const forwarded = await forwardDmToThread(client, message).catch((err) => {
         logger.error(`Modmail DM forward error: ${err?.stack || err}`);
+        return false;
       });
+      if (!forwarded) {
+        await message.reply("📭 Ce bot ne prend pas en charge les messages privés pour le moment.").catch(() => {});
+      }
       return;
     }
 

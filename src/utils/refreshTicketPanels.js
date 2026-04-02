@@ -1,5 +1,6 @@
 const { listPanels, listTypes } = require("../../services/tickets.db");
 const { buildPanelEmbed, buildPanelComponents } = require("./ticketViews");
+const logger = require("./logger");
 
 async function refreshPanelsUsingType(guild, typeId) {
   if (!guild || !typeId) return;
@@ -33,7 +34,7 @@ async function refreshPanelsUsingType(guild, typeId) {
         components: buildPanelComponents({ panel, types: panelTypes }),
       });
     } catch (error) {
-      console.error(`[Tickets] Impossible de refresh le panel ${panel.id}:`, error);
+      logger.error(`[Tickets] Impossible de refresh le panel ${panel.id}: ${error?.message || error}`);
     }
   }
 }

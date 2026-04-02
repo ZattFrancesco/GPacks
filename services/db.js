@@ -45,6 +45,11 @@ function getPool() {
       connectionLimit: 10,
       queueLimit: 0,
     });
+
+    // Healthcheck : log les erreurs de connexion perdues
+    pool.on("error", (err) => {
+      logger.error(`MySQL pool error: ${err?.code || err?.message || err}`);
+    });
   }
   return pool;
 }

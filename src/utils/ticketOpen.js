@@ -9,7 +9,7 @@ const {
   ButtonStyle,
 } = require("discord.js");
 
-const { getPanel, getType, createTicket, setTicketControlMessageId } = require("../../services/tickets.db");
+const { getPanel, getType, createTicket, setTicketControlMessageId, countOpenTicketsByUser } = require("../../services/tickets.db");
 const { buildTicketControlEmbed, buildTicketOpenRows } = require("./ticketViews");
 const { setOpenDraft } = require("./ticketDrafts");
 const { isBlacklisted } = require("../../services/blacklist.db");
@@ -65,6 +65,12 @@ async function openTicketFromPanel(interaction, { panelId, typeId }) {
 
   const type = await getType(guildId, typeId);
   if (!type) return interaction.reply({ content: "❌ Type introuvable.", flags: 64 });
+
+  // Anti-spam : max 1 ticket ouvert par type
+  const openCount = await countOpenTicketsByUser(guildId, interaction.user.id, typeId);
+  if (openCount >= 1) {
+    return interaction.reply({ content: "❌ Tu as déjà un ticket ouvert de ce type. Ferme-le avant d'en ouvrir un autre.", flags: 64 });
+  }
 
   // Si namemodalrename : modal avant
   if (type.namemodalrename) {

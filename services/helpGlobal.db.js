@@ -1,7 +1,9 @@
 // services/helpGlobal.db.js
 const { query } = require("./db");
+const { ensureRegistryTables } = require("./registry.db");
 
 async function getVisibleCategories() {
+  await ensureRegistryTables();
   return await query(
     `SELECT category_key, display_name, emoji, color, sort_order
      FROM help_categories
@@ -11,6 +13,7 @@ async function getVisibleCategories() {
 }
 
 async function getItemsForCategory(categoryKey) {
+  await ensureRegistryTables();
   return await query(
     `SELECT
         i.item_key,
@@ -29,6 +32,7 @@ async function getItemsForCategory(categoryKey) {
 }
 
 async function getUncategorizedItems() {
+  await ensureRegistryTables();
   return await query(
     `SELECT
         i.item_key,

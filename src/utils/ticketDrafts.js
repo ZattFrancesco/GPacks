@@ -44,6 +44,17 @@ function clearTypeCreateDraft(guildId, userId) {
   typeCreateDrafts.delete(key(guildId, userId));
 }
 
+// Nettoyage automatique des drafts expirés
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of openDrafts.entries()) {
+    if (now - (v.at || 0) > TTL_MS) openDrafts.delete(k);
+  }
+  for (const [k, v] of typeCreateDrafts.entries()) {
+    if (now - (v.at || 0) > TTL_MS) typeCreateDrafts.delete(k);
+  }
+}, 60 * 1000).unref?.();
+
 module.exports = {
   setOpenDraft,
   getOpenDraft,

@@ -34,6 +34,14 @@ function clearTypeEditSession({ guildId, userId, typeId, field }) {
   sessions.delete(key);
 }
 
+// Nettoyage automatique
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of sessions.entries()) {
+    if (now - (v.createdAt || 0) > TTL_MS) sessions.delete(k);
+  }
+}, 60 * 1000).unref?.();
+
 module.exports = {
   setTypeEditSession,
   getTypeEditSession,

@@ -448,6 +448,24 @@ async function clearPendingCloseMessage(guildId, ticketId) {
   );
 }
 
+async function countOpenTicketsByUser(guildId, userId, typeId = null) {
+  await ensureTables();
+  if (typeId) {
+    const rows = await query(
+      `SELECT COUNT(*) AS c FROM doj_tickets
+       WHERE guild_id = ? AND author_user_id = ? AND type_id = ? AND status = 'open'`,
+      [String(guildId), String(userId), normalizeId(typeId)]
+    );
+    return Number(rows?.[0]?.c || 0);
+  }
+  const rows = await query(
+    `SELECT COUNT(*) AS c FROM doj_tickets
+     WHERE guild_id = ? AND author_user_id = ? AND status = 'open'`,
+    [String(guildId), String(userId)]
+  );
+  return Number(rows?.[0]?.c || 0);
+}
+
 module.exports = {
   ensureTables,
   normalizeId,
@@ -475,4 +493,5 @@ module.exports = {
   setTicketControlMessageId,
   setPendingCloseMessage,
   clearPendingCloseMessage,
+  countOpenTicketsByUser,
 };
