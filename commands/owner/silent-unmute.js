@@ -7,6 +7,8 @@ module.exports = {
     .setDescription('Retirer un silent-mute')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addUserOption((o) => o.setName('user').setDescription('Membre ciblé').setRequired(true)),
+  
+    ownerOnly: true,
 
   async execute(interaction) {
     await ensureTable();

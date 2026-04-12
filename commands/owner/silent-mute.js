@@ -29,6 +29,8 @@ module.exports = {
         .setDescription('Lister les silent-mutes')
     ),
 
+    ownerOnly: true,
+
   async execute(interaction) {
     await ensureTable();
     const sub = interaction.options.getSubcommand(true);
