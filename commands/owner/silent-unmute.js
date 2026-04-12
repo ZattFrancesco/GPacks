@@ -10,6 +10,13 @@ module.exports = {
 
   async execute(interaction) {
     await ensureTable();
+    
+    if (!isOwner(interaction.user.id)) {
+      return interaction.reply({
+        content: "❌ Cette commande est réservée au propriétaire du bot.",
+        flags: 64,
+      });
+    }
 
     const target = interaction.options.getUser('user', true);
     const existing = await getSilentMute(interaction.guildId, target.id);

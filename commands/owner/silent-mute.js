@@ -33,6 +33,13 @@ module.exports = {
     await ensureTable();
     const sub = interaction.options.getSubcommand(true);
 
+    if (!isOwner(interaction.user.id)) {
+      return interaction.reply({
+        content: "❌ Cette commande est réservée au propriétaire du bot.",
+        flags: 64,
+      });
+    }
+
     if (sub === 'add') {
       const target = interaction.options.getUser('user', true);
       const reason = interaction.options.getString('reason', false);
