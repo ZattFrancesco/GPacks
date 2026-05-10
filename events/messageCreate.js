@@ -8,7 +8,12 @@ const { isOwner } = require("../src/utils/permissions");
 const { isBlacklisted } = require("../services/blacklist.db");
 const { isSilentMuted } = require("../services/silentMute.db");
 const { sendLog, DEFAULT_COLORS, lines, userLabel, channelLabel, trim } = require("../src/utils/discordLogs");
-const { forwardDmToThread } = require("../src/utils/modmail");
+const {
+  forwardDmToThread,
+  isModmailThread,
+  extractUserIdFromThreadName,
+  sendOwnerMessageToUser,
+} = require("../src/utils/modmail");
 
 module.exports = {
   name: "messageCreate",
@@ -25,6 +30,42 @@ module.exports = {
         await message.reply("📭 Ce bot ne prend pas en charge les messages privés pour le moment.").catch(() => {});
       }
       return;
+    }
+
+    // Relai automatique : si l'owner écrit dans un thread modmail, on envoie le contenu en DM
+    // à l'utilisateur dont l'ID est encodé dans le nom du thread (`username - 123456789012345678`).
+    // Équivalent à un /pm transparent.
+    if (isModmailThread(message.channel) && isOwner(message.author.id)) {
+      const targetUserId = extractUserIdFromThreadName(message.channel.name);
+      if (targetUserId) {
+        const result = await sendOwnerMessageToUser(client, {
+          userId: targetUserId,
+          content: message.content,
+          attachments: [...message.attachments.values()],
+          authorMessage: message,
+          archiveInThread: false, // on ne renvoie pas un embed récap dans le même thread,
+                                  // sinon doublon avec le message d'origine
+        }).catch((err) => {
+          logger.error(`Modmail relay error: ${err?.stack || err}`);
+          return { ok: false, code: 'exception', error: err };
+        });
+
+        if (result?.ok) {
+          await message.react("✅").catch(() => {});
+        } else {
+          const reasonByCode = {
+            invalid_id: "❌ ID utilisateur invalide dans le nom du fil.",
+            empty: "❌ Message vide, rien à envoyer.",
+            user_not_found: "❌ Utilisateur introuvable.",
+            dm_failed: "❌ Impossible d'envoyer le DM (DM fermés, blocage, etc.).",
+          };
+          await message.reply({
+            content: reasonByCode[result?.code] || "❌ Échec de l'envoi du DM.",
+            allowedMentions: { repliedUser: false },
+          }).catch(() => {});
+        }
+        return;
+      }
     }
 
     if (message.guildId && (await isSilentMuted(message.guildId, message.author.id))) {
