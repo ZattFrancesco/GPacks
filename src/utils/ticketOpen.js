@@ -14,6 +14,7 @@ const { buildTicketControlEmbed, buildTicketOpenRows } = require("./ticketViews"
 const { setOpenDraft } = require("./ticketDrafts");
 const { isBlacklisted } = require("../../services/blacklist.db");
 const { auditLog } = require("./auditLog");
+const { isOwner  } = require("../../src/utils/permissions.js");
 
 function sanitizeChannelPart(s) {
   return String(s || "")
