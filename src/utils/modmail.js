@@ -1,8 +1,13 @@
 const {
   ChannelType,
-  EmbedBuilder,
   ThreadAutoArchiveDuration,
+  PermissionFlagsBits,
 } = require('discord.js');
+
+const WEBHOOK_NAME = 'GPacks Modmail';
+
+// Cache du webhook par parent channel id, pour éviter de refetch à chaque message.
+const webhookCache = new Map();
 
 function sanitizeThreadNamePart(value) {
   return String(value || 'unknown')
@@ -18,9 +23,20 @@ function buildThreadName(user) {
 }
 
 /**
+ * Format d'affichage du nom dans le webhook : "username [ID: 123...]"
+ * Limite Discord pour username webhook : 80 chars.
+ */
+function buildWebhookUsername(user) {
+  const base = sanitizeThreadNamePart(user?.username || user?.tag || 'user');
+  const suffix = ` [ID: ${user.id}]`;
+  const maxBase = 80 - suffix.length;
+  const trimmed = base.length > maxBase ? base.slice(0, maxBase - 1) + '…' : base;
+  return `${trimmed}${suffix}`;
+}
+
+/**
  * Extrait l'ID utilisateur d'un nom de thread modmail.
- * Les threads créés par ce module ont la forme `username - 123456789012345678`.
- * Retourne l'ID si trouvé, sinon null.
+ * Threads créés par ce module : `username - 123456789012345678`.
  */
 function extractUserIdFromThreadName(threadName) {
   if (!threadName) return null;
@@ -28,9 +44,6 @@ function extractUserIdFromThreadName(threadName) {
   return match ? match[1] : null;
 }
 
-/**
- * Détermine si un thread est un thread modmail (enfant du salon MODMAIL_CHANNEL_ID).
- */
 function isModmailThread(channel) {
   if (!channel || !channel.isThread?.()) return false;
   const parentId = process.env.MODMAIL_CHANNEL_ID;
@@ -38,59 +51,50 @@ function isModmailThread(channel) {
   return channel.parentId === parentId;
 }
 
-function buildMessageEmbed(message) {
-  const hasText = Boolean(String(message.content || '').trim());
-  const attachmentLines = message.attachments.size
-    ? message.attachments.map((a) => `• [${a.name || 'fichier'}](${a.url})`).join('\n')
-    : null;
-
-  const embed = new EmbedBuilder()
-    .setAuthor({
-      name: `${message.author.tag} (${message.author.id})`,
-      iconURL: message.author.displayAvatarURL({ forceStatic: false }),
-    })
-    .setDescription(hasText ? message.content.slice(0, 4096) : '*Aucun contenu texte*')
-    .setFooter({ text: `DM reçu • User ID: ${message.author.id}` })
-    .setTimestamp(message.createdAt || new Date());
-
-  if (attachmentLines) {
-    embed.addFields({
-      name: 'Pièces jointes',
-      value: attachmentLines.slice(0, 1024),
-    });
-  }
-
-  return embed;
-}
-
 /**
- * Embed pour les messages que l'owner envoie depuis le serveur vers le user.
- * Différencié visuellement des messages reçus (couleur + footer).
+ * Récupère (ou crée) le webhook utilisé pour poster dans les threads modmail.
+ * Cache en mémoire pour ne pas refetch à chaque message.
+ * Retourne null si impossible (permissions manquantes, etc.).
  */
-function buildOutgoingEmbed(message, targetUser) {
-  const hasText = Boolean(String(message.content || '').trim());
-  const attachmentLines = message.attachments?.size
-    ? message.attachments.map((a) => `• [${a.name || 'fichier'}](${a.url})`).join('\n')
-    : null;
+async function getOrCreateModmailWebhook(client) {
+  const parentId = process.env.MODMAIL_CHANNEL_ID;
+  if (!parentId) return null;
 
-  const embed = new EmbedBuilder()
-    .setAuthor({
-      name: `${message.author.tag} (${message.author.id})`,
-      iconURL: message.author.displayAvatarURL({ forceStatic: false }),
-    })
-    .setColor(0x57f287)
-    .setDescription(hasText ? message.content.slice(0, 4096) : '*Aucun contenu texte*')
-    .setFooter({ text: `DM envoyé → ${targetUser.tag} (${targetUser.id})` })
-    .setTimestamp(message.createdAt || new Date());
-
-  if (attachmentLines) {
-    embed.addFields({
-      name: 'Pièces jointes',
-      value: attachmentLines.slice(0, 1024),
-    });
+  if (webhookCache.has(parentId)) {
+    return webhookCache.get(parentId);
   }
 
-  return embed;
+  const parentChannel = await client.channels.fetch(parentId).catch(() => null);
+  if (!parentChannel || parentChannel.type !== ChannelType.GuildText) return null;
+
+  // Vérifie qu'on a la perm.
+  const me = parentChannel.guild?.members?.me;
+  if (me && !parentChannel.permissionsFor(me)?.has(PermissionFlagsBits.ManageWebhooks)) {
+    return null;
+  }
+
+  let webhook = null;
+  try {
+    const hooks = await parentChannel.fetchWebhooks();
+    webhook = hooks.find((h) => h.owner?.id === client.user.id && h.name === WEBHOOK_NAME) || null;
+  } catch {
+    return null;
+  }
+
+  if (!webhook) {
+    try {
+      webhook = await parentChannel.createWebhook({
+        name: WEBHOOK_NAME,
+        avatar: client.user.displayAvatarURL({ size: 256, extension: 'png' }),
+        reason: 'Webhook modmail (relai DM ↔ thread)',
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  webhookCache.set(parentId, webhook);
+  return webhook;
 }
 
 async function fetchExistingThread(parentChannel, userId) {
@@ -133,38 +137,68 @@ async function getOrCreateModmailThread(client, user) {
   return thread;
 }
 
+/**
+ * Poste un message dans un thread via webhook, en se faisant passer pour `asUser`.
+ * Fallback en envoi normal (thread.send) si le webhook n'est pas disponible.
+ */
+async function postViaWebhook(client, thread, { asUser, content, files = [] }) {
+  const webhook = await getOrCreateModmailWebhook(client);
+
+  if (webhook) {
+    try {
+      await webhook.send({
+        threadId: thread.id,
+        username: buildWebhookUsername(asUser),
+        avatarURL: asUser.displayAvatarURL({ size: 256, forceStatic: false }),
+        content: content || undefined,
+        files,
+        allowedMentions: { parse: [] },
+      });
+      return true;
+    } catch {
+      // Webhook invalidé (supprimé manuellement) → on vide le cache et on retentera plus tard.
+      webhookCache.delete(process.env.MODMAIL_CHANNEL_ID);
+    }
+  }
+
+  // Fallback : envoi standard en indiquant qui parle.
+  await thread.send({
+    content: `**${asUser.tag}** : ${content || '*(aucun contenu)*'}`,
+    files,
+    allowedMentions: { parse: [] },
+  }).catch(() => {});
+  return false;
+}
+
+/**
+ * Relai d'un DM entrant (user → bot) vers le thread modmail, via webhook.
+ */
 async function forwardDmToThread(client, message) {
   const thread = await getOrCreateModmailThread(client, message.author);
   if (!thread) return false;
 
   const files = message.attachments.map((a) => ({ attachment: a.url, name: a.name || undefined }));
 
-  await thread.send({
-    embeds: [buildMessageEmbed(message)],
+  await postViaWebhook(client, thread, {
+    asUser: message.author,
+    content: message.content,
     files,
-    allowedMentions: { parse: [] },
   });
 
   return true;
 }
 
 /**
- * Envoie un DM à l'utilisateur cible et archive un récap dans le thread modmail.
- * Utilisé à la fois par le modal `/pm` et par l'auto-relai des messages écrits
- * directement dans un thread modmail.
+ * Envoie un DM à `userId` au nom du bot, et poste un miroir dans le thread modmail
+ * en se faisant passer pour `senderUser` (toi) via webhook.
  *
- * Retourne { ok: true, user, thread } en cas de succès,
- * ou { ok: false, code, error } en cas d'échec :
- *   - 'invalid_id'    : userId non valide
- *   - 'empty'         : contenu vide ET aucune pièce jointe
- *   - 'user_not_found': fetch utilisateur impossible
- *   - 'dm_failed'     : envoi du DM rejeté par Discord (DM fermés, blocage, etc.)
+ * Codes d'erreur : invalid_id, empty, user_not_found, dm_failed.
  */
 async function sendOwnerMessageToUser(client, {
   userId,
+  senderUser,        // l'utilisateur Discord qui envoie (l'owner) — utilisé pour le webhook
   content = '',
   attachments = [],
-  authorMessage = null, // facultatif : message Discord d'origine pour l'embed récap
   archiveInThread = true,
 }) {
   if (!userId || !/^\d{17,20}$/.test(String(userId))) {
@@ -200,14 +234,14 @@ async function sendOwnerMessageToUser(client, {
   }
 
   let thread = null;
-  if (archiveInThread) {
+  if (archiveInThread && senderUser) {
     thread = await getOrCreateModmailThread(client, user).catch(() => null);
-    if (thread && authorMessage) {
-      await thread.send({
-        embeds: [buildOutgoingEmbed(authorMessage, user)],
+    if (thread) {
+      await postViaWebhook(client, thread, {
+        asUser: senderUser,
+        content: text,
         files,
-        allowedMentions: { parse: [] },
-      }).catch(() => {});
+      });
     }
   }
 
@@ -216,6 +250,7 @@ async function sendOwnerMessageToUser(client, {
 
 module.exports = {
   getOrCreateModmailThread,
+  getOrCreateModmailWebhook,
   forwardDmToThread,
   sendOwnerMessageToUser,
   extractUserIdFromThreadName,

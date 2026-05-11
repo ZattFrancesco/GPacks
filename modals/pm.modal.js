@@ -16,19 +16,11 @@ module.exports = {
     const userId = parts[2];
     const message = interaction.fields.getTextInputValue("message")?.trim();
 
-    // On construit un "authorMessage" minimal pour réutiliser l'embed récap.
-    const fakeAuthorMessage = {
-      author: interaction.user,
-      content: message,
-      attachments: { size: 0, map: () => [] },
-      createdAt: new Date(),
-    };
-
     const result = await sendOwnerMessageToUser(client, {
       userId,
+      senderUser: interaction.user,
       content: message,
       attachments: [],
-      authorMessage: fakeAuthorMessage,
       archiveInThread: true,
     }).catch((error) => {
       console.error("[pm modal] erreur envoi DM :", error);

@@ -20,6 +20,8 @@ module.exports = {
   once: false,
   async execute(client, message) {
     if (!message || message.author?.bot) return;
+    // Ignore aussi les webhooks (notre propre relai, sinon boucle infinie).
+    if (message.webhookId) return;
 
     if (!message.guildId) {
       const forwarded = await forwardDmToThread(client, message).catch((err) => {
@@ -40,11 +42,10 @@ module.exports = {
       if (targetUserId) {
         const result = await sendOwnerMessageToUser(client, {
           userId: targetUserId,
+          senderUser: message.author,
           content: message.content,
           attachments: [...message.attachments.values()],
-          authorMessage: message,
-          archiveInThread: false, // on ne renvoie pas un embed récap dans le même thread,
-                                  // sinon doublon avec le message d'origine
+          archiveInThread: false, // on ne re-poste pas via webhook ici, le message d'origine fait office d'archive
         }).catch((err) => {
           logger.error(`Modmail relay error: ${err?.stack || err}`);
           return { ok: false, code: 'exception', error: err };
