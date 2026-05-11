@@ -37,8 +37,9 @@ module.exports = {
       const mapping = await getByThreadMsg(message.id);
       if (mapping && mapping.direction === 'outgoing') {
         const original = String(message.content || '');
+        const delstaffmessage = '[Contenu indisponible]'
         const tag = '*[Message supprimé par le staff]*';
-        const newContent = original ? `~~${original}~~\n${tag}` : tag;
+        const newContent = original ? `~~${delstaffmessage}~~\n${tag}` : tag;
         await editDmMessage(client, {
           dmChannelId: mapping.dm_channel_id,
           dmMsgId: mapping.dm_msg_id,
