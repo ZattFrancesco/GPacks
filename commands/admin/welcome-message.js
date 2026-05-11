@@ -49,7 +49,7 @@ module.exports = {
       .setStyle(TextInputStyle.Paragraph)
       .setRequired(false)
       .setMaxLength(2000)
-      .setPlaceholder('Hello {user} ! Bienvenue sur {server}. Tu es notre {membercount}ᵉ membre.\n\nVariables : {user}, {username}, {server}, {membercount}');
+      .setPlaceholder('Variables : {user}, {username}, {server}, {membercount}');
     if (existing?.message) messageInput.setValue(existing.message);
 
     modal.addComponents(
