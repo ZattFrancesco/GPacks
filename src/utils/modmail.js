@@ -6,7 +6,7 @@ const {
 
 const WEBHOOK_NAME = 'GPacks Modmail';
 
-// Cache du webhook par parent channel id, pour éviter de refetch à chaque message.
+// Cache du webhook par parent channel id.
 const webhookCache = new Map();
 
 function sanitizeThreadNamePart(value) {
@@ -22,10 +22,6 @@ function buildThreadName(user) {
   return `${username} - ${user.id}`.slice(0, 100);
 }
 
-/**
- * Format d'affichage du nom dans le webhook : "username [ID: 123...]"
- * Limite Discord pour username webhook : 80 chars.
- */
 function buildWebhookUsername(user) {
   const base = sanitizeThreadNamePart(user?.username || user?.tag || 'user');
   const suffix = ` [ID: ${user.id}]`;
@@ -34,10 +30,6 @@ function buildWebhookUsername(user) {
   return `${trimmed}${suffix}`;
 }
 
-/**
- * Extrait l'ID utilisateur d'un nom de thread modmail.
- * Threads créés par ce module : `username - 123456789012345678`.
- */
 function extractUserIdFromThreadName(threadName) {
   if (!threadName) return null;
   const match = String(threadName).match(/(\d{17,20})\s*$/);
@@ -51,23 +43,15 @@ function isModmailThread(channel) {
   return channel.parentId === parentId;
 }
 
-/**
- * Récupère (ou crée) le webhook utilisé pour poster dans les threads modmail.
- * Cache en mémoire pour ne pas refetch à chaque message.
- * Retourne null si impossible (permissions manquantes, etc.).
- */
 async function getOrCreateModmailWebhook(client) {
   const parentId = process.env.MODMAIL_CHANNEL_ID;
   if (!parentId) return null;
 
-  if (webhookCache.has(parentId)) {
-    return webhookCache.get(parentId);
-  }
+  if (webhookCache.has(parentId)) return webhookCache.get(parentId);
 
   const parentChannel = await client.channels.fetch(parentId).catch(() => null);
   if (!parentChannel || parentChannel.type !== ChannelType.GuildText) return null;
 
-  // Vérifie qu'on a la perm.
   const me = parentChannel.guild?.members?.me;
   if (me && !parentChannel.permissionsFor(me)?.has(PermissionFlagsBits.ManageWebhooks)) {
     return null;
@@ -101,7 +85,6 @@ async function fetchExistingThread(parentChannel, userId) {
   const active = await parentChannel.threads.fetchActive().catch(() => null);
   let thread = active?.threads?.find((t) => t.name.endsWith(`- ${userId}`) || t.name.endsWith(userId));
   if (thread) return thread;
-
   const archived = await parentChannel.threads.fetchArchived().catch(() => null);
   thread = archived?.threads?.find((t) => t.name.endsWith(`- ${userId}`) || t.name.endsWith(userId));
   return thread || null;
@@ -138,15 +121,28 @@ async function getOrCreateModmailThread(client, user) {
 }
 
 /**
+ * Construit le bloc "reply" en markdown : citation visuelle du message d'origine.
+ * Quand on ne peut pas faire un vrai messageReference (DM ↔ webhook), on simule.
+ */
+function buildReplyQuote(referencedMsg, maxLen = 80) {
+  if (!referencedMsg) return '';
+  const author = referencedMsg.author?.username || referencedMsg.author?.tag || 'inconnu';
+  let text = String(referencedMsg.content || '').replace(/\n/g, ' ').trim();
+  if (!text) text = '*(pièce jointe / embed)*';
+  if (text.length > maxLen) text = text.slice(0, maxLen - 1) + '…';
+  return `> **↪ ${author}** : ${text}\n`;
+}
+
+/**
  * Poste un message dans un thread via webhook, en se faisant passer pour `asUser`.
- * Fallback en envoi normal (thread.send) si le webhook n'est pas disponible.
+ * Retourne le message créé (utile pour récupérer son ID), ou null si fallback.
  */
 async function postViaWebhook(client, thread, { asUser, content, files = [] }) {
   const webhook = await getOrCreateModmailWebhook(client);
 
   if (webhook) {
     try {
-      await webhook.send({
+      const sent = await webhook.send({
         threadId: thread.id,
         username: buildWebhookUsername(asUser),
         avatarURL: asUser.displayAvatarURL({ size: 256, forceStatic: false }),
@@ -154,52 +150,156 @@ async function postViaWebhook(client, thread, { asUser, content, files = [] }) {
         files,
         allowedMentions: { parse: [] },
       });
-      return true;
+      return { message: sent, webhookId: webhook.id, viaWebhook: true };
     } catch {
-      // Webhook invalidé (supprimé manuellement) → on vide le cache et on retentera plus tard.
       webhookCache.delete(process.env.MODMAIL_CHANNEL_ID);
     }
   }
 
-  // Fallback : envoi standard en indiquant qui parle.
-  await thread.send({
+  // Fallback : envoi standard.
+  const sent = await thread.send({
     content: `**${asUser.tag}** : ${content || '*(aucun contenu)*'}`,
     files,
     allowedMentions: { parse: [] },
-  }).catch(() => {});
-  return false;
+  }).catch(() => null);
+  return sent ? { message: sent, webhookId: null, viaWebhook: false } : null;
 }
 
 /**
- * Relai d'un DM entrant (user → bot) vers le thread modmail, via webhook.
+ * Édite un message déjà posté via webhook.
+ * Retourne true si succès, false sinon.
+ */
+async function editWebhookMessage(client, { threadId, messageId, content }) {
+  const webhook = await getOrCreateModmailWebhook(client);
+  if (!webhook) return false;
+  try {
+    await webhook.editMessage(messageId, {
+      content: content || ' ', // Discord n'aime pas le contenu vide
+      threadId,
+      allowedMentions: { parse: [] },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Édite un message DM (côté user) via le DMChannel.
+ * Note : le bot ne peut éditer que SES propres messages.
+ */
+async function editDmMessage(client, { dmChannelId, dmMsgId, content }) {
+  try {
+    const channel = await client.channels.fetch(dmChannelId).catch(() => null);
+    if (!channel) return false;
+    const msg = await channel.messages.fetch(dmMsgId).catch(() => null);
+    if (!msg) return false;
+    if (msg.author?.id !== client.user.id) return false; // pas notre msg → impossible
+    await msg.edit({
+      content: content || ' ',
+      allowedMentions: { parse: [] },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Ajoute ou retire une réaction sur un message webhook (dans le thread)
+ * OU sur un message DM (côté user). Le webhookId n'est pas nécessaire ici :
+ * une réaction sur un message webhook se fait comme sur n'importe quel autre message.
+ */
+async function reactToMessage(client, { channelId, messageId, emoji, add = true }) {
+  try {
+    const channel = await client.channels.fetch(channelId).catch(() => null);
+    if (!channel) return false;
+    const msg = await channel.messages.fetch(messageId).catch(() => null);
+    if (!msg) return false;
+    if (add) {
+      await msg.react(emoji);
+    } else {
+      const reaction = msg.reactions.cache.find(
+        (r) => r.emoji?.name === emoji || r.emoji?.id === emoji || r.emoji?.toString() === emoji
+      );
+      if (reaction) {
+        await reaction.users.remove(client.user.id).catch(() => {});
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Épingle / désépingle un message côté DM.
+ */
+async function setPinDmMessage(client, { dmChannelId, dmMsgId, pin }) {
+  try {
+    const channel = await client.channels.fetch(dmChannelId).catch(() => null);
+    if (!channel) return false;
+    const msg = await channel.messages.fetch(dmMsgId).catch(() => null);
+    if (!msg) return false;
+    if (pin) await msg.pin().catch(() => {});
+    else await msg.unpin().catch(() => {});
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Relai d'un DM entrant via webhook, avec support des replies (citation visuelle).
+ * Retourne { threadMsgId, webhookId, dmMsgId, dmChannelId } si succès.
  */
 async function forwardDmToThread(client, message) {
   const thread = await getOrCreateModmailThread(client, message.author);
-  if (!thread) return false;
+  if (!thread) return null;
 
   const files = message.attachments.map((a) => ({ attachment: a.url, name: a.name || undefined }));
 
-  await postViaWebhook(client, thread, {
+  // Si c'est une reply dans le DM, on récupère le message cité pour reconstruire la quote.
+  let quote = '';
+  if (message.reference?.messageId) {
+    const referenced = await message.channel.messages
+      .fetch(message.reference.messageId)
+      .catch(() => null);
+    if (referenced) quote = buildReplyQuote(referenced);
+  }
+
+  const finalContent = quote + (message.content || '');
+
+  const result = await postViaWebhook(client, thread, {
     asUser: message.author,
-    content: message.content,
+    content: finalContent,
     files,
   });
 
-  return true;
+  if (!result) return null;
+
+  return {
+    threadId: thread.id,
+    threadMsgId: result.message.id,
+    webhookId: result.webhookId,
+    dmChannelId: message.channel.id,
+    dmMsgId: message.id,
+    userId: message.author.id,
+  };
 }
 
 /**
- * Envoie un DM à `userId` au nom du bot, et poste un miroir dans le thread modmail
- * en se faisant passer pour `senderUser` (toi) via webhook.
- *
- * Codes d'erreur : invalid_id, empty, user_not_found, dm_failed.
+ * Envoie un DM à un user au nom du bot + miroir dans le thread via webhook.
+ * Supporte les replies : si `replyToDmMsgId` est fourni, le DM sera envoyé en reply.
  */
 async function sendOwnerMessageToUser(client, {
   userId,
-  senderUser,        // l'utilisateur Discord qui envoie (l'owner) — utilisé pour le webhook
+  senderUser,
   content = '',
   attachments = [],
   archiveInThread = true,
+  replyToDmMsgId = null,         // si on veut que le DM soit une vraie reply
+  replyQuoteForThread = null,    // contenu de quote visuel à préfixer côté thread
 }) {
   if (!userId || !/^\d{17,20}$/.test(String(userId))) {
     return { ok: false, code: 'invalid_id' };
@@ -224,35 +324,63 @@ async function sendOwnerMessageToUser(client, {
     ? attachments.map((a) => ({ attachment: a.url || a.attachment, name: a.name || undefined }))
     : [];
 
+  let dmSent;
   try {
-    await user.send({
+    const dmPayload = {
       content: text || undefined,
       files,
-    });
+    };
+    if (replyToDmMsgId) {
+      dmPayload.reply = { messageReference: replyToDmMsgId, failIfNotExists: false };
+    }
+    dmSent = await user.send(dmPayload);
   } catch (error) {
     return { ok: false, code: 'dm_failed', error, user };
   }
 
   let thread = null;
+  let threadMsgId = null;
+  let webhookId = null;
+
   if (archiveInThread && senderUser) {
     thread = await getOrCreateModmailThread(client, user).catch(() => null);
     if (thread) {
-      await postViaWebhook(client, thread, {
+      const finalContent = (replyQuoteForThread || '') + text;
+      const posted = await postViaWebhook(client, thread, {
         asUser: senderUser,
-        content: text,
+        content: finalContent,
         files,
       });
+      if (posted) {
+        threadMsgId = posted.message.id;
+        webhookId = posted.webhookId;
+      }
     }
   }
 
-  return { ok: true, user, thread };
+  return {
+    ok: true,
+    user,
+    thread,
+    threadMsgId,
+    webhookId,
+    dmMsgId: dmSent.id,
+    dmChannelId: dmSent.channel?.id || dmSent.channelId,
+  };
 }
 
 module.exports = {
+  // existants
   getOrCreateModmailThread,
   getOrCreateModmailWebhook,
   forwardDmToThread,
   sendOwnerMessageToUser,
   extractUserIdFromThreadName,
   isModmailThread,
+  // nouveaux helpers
+  editWebhookMessage,
+  editDmMessage,
+  reactToMessage,
+  setPinDmMessage,
+  buildReplyQuote,
 };

@@ -1,5 +1,6 @@
 const { isOwner } = require("../src/utils/permissions");
 const { sendOwnerMessageToUser } = require("../src/utils/modmail");
+const { saveMapping } = require("../services/modmailMap.db");
 
 module.exports = {
   idPrefix: "pm:send:",
@@ -28,6 +29,18 @@ module.exports = {
     });
 
     if (result?.ok) {
+      // Mapping pour que les futures actions (édit/supp/réact/pin) marchent.
+      if (result.threadMsgId && result.dmMsgId) {
+        await saveMapping({
+          threadId: result.thread?.id,
+          threadMsgId: result.threadMsgId,
+          dmChannelId: result.dmChannelId,
+          dmMsgId: result.dmMsgId,
+          userId: result.user.id,
+          direction: 'outgoing',
+          webhookId: result.webhookId,
+        });
+      }
       return interaction.reply({
         content: `✅ Message envoyé à **${result.user.tag}** (\`${result.user.id}\`).`,
         flags: 64,
