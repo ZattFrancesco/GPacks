@@ -1,4 +1,6 @@
 const { isOwner } = require("../src/utils/permissions");
+const { sendOwnerMessageToUser } = require("../src/utils/modmail");
+const { saveMapping } = require("../services/modmailMap.db");
 
 module.exports = {
   idPrefix: "pm:send:",
@@ -15,45 +17,46 @@ module.exports = {
     const userId = parts[2];
     const message = interaction.fields.getTextInputValue("message")?.trim();
 
-    if (!userId || !/^\d{17,20}$/.test(userId)) {
-      return interaction.reply({
-        content: "❌ ID utilisateur invalide.",
-        flags: 64,
-      });
-    }
+    const result = await sendOwnerMessageToUser(client, {
+      userId,
+      senderUser: interaction.user,
+      content: message,
+      attachments: [],
+      archiveInThread: true,
+    }).catch((error) => {
+      console.error("[pm modal] erreur envoi DM :", error);
+      return { ok: false, code: "exception", error };
+    });
 
-    if (!message) {
-      return interaction.reply({
-        content: "❌ Le message est vide.",
-        flags: 64,
-      });
-    }
-
-    try {
-      const user = await client.users.fetch(userId);
-
-      if (!user) {
-        return interaction.reply({
-          content: "❌ Utilisateur introuvable.",
-          flags: 64,
+    if (result?.ok) {
+      // Mapping pour que les futures actions (édit/supp/réact/pin) marchent.
+      if (result.threadMsgId && result.dmMsgId) {
+        await saveMapping({
+          threadId: result.thread?.id,
+          threadMsgId: result.threadMsgId,
+          dmChannelId: result.dmChannelId,
+          dmMsgId: result.dmMsgId,
+          userId: result.user.id,
+          direction: 'outgoing',
+          webhookId: result.webhookId,
         });
       }
-
-      await user.send({
-        content: message,
-      });
-
       return interaction.reply({
-        content: `✅ Message envoyé à **${user.tag}** (\`${user.id}\`).`,
-        flags: 64,
-      });
-    } catch (error) {
-      console.error("[pm modal] erreur envoi DM :", error);
-
-      return interaction.reply({
-        content: "❌ Impossible d'envoyer le message privé à cet utilisateur.",
+        content: `✅ Message envoyé à **${result.user.tag}** (\`${result.user.id}\`).`,
         flags: 64,
       });
     }
+
+    const reasonByCode = {
+      invalid_id: "❌ ID utilisateur invalide.",
+      empty: "❌ Le message est vide.",
+      user_not_found: "❌ Utilisateur introuvable.",
+      dm_failed: "❌ Impossible d'envoyer le message privé à cet utilisateur.",
+    };
+
+    return interaction.reply({
+      content: reasonByCode[result?.code] || "❌ Échec de l'envoi du DM.",
+      flags: 64,
+    });
   },
 };
