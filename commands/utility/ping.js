@@ -16,7 +16,7 @@ module.exports = {
     const apiLatency = interaction.client.ws.ping;
 
     await interaction.editReply(
-      `**🏓 Pong !**\nLatence message :** ${messageLatency}ms**\nLatence API :** ${apiLatency}ms**`
+      `**🏓 Pong !**\nLatence message :** ${messageLatency}ms**\nLatence API :** ${apiLatency}ms\nGrizzly**`
     );
   },
 };
