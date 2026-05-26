@@ -1,10 +1,32 @@
 const { sendLog, DEFAULT_COLORS, userLabel, channelLabel, lines, resolveAuditEntry, AuditLogEvent } = require('../src/utils/discordLogs');
+const { isGolemActive, getGolemChannelId, leaveGolem } = require('../src/utils/golemVoice');
 
 module.exports = {
   name: 'voiceStateUpdate',
   once: false,
   async execute(client, oldState, newState) {
     const member = newState?.member || oldState?.member;
+
+    // --- Gestion du Golem (bot maintenu en vocale) ---
+    // Si l'état vocal qui change est celui du BOT lui-même et qu'un golem est
+    // actif sur ce serveur, on détecte un éventuel kick / déconnexion / déplacement
+    // pour libérer proprement la connexion. Le bot ne quitte JAMAIS de lui-même :
+    // ce nettoyage n'a lieu que si un humain l'a sorti du salon.
+    if (member?.id === client.user?.id) {
+      const guildId = (newState?.guild || oldState?.guild)?.id;
+      if (guildId && isGolemActive(guildId)) {
+        const targetChannelId = getGolemChannelId(guildId);
+        const currentChannelId = newState?.channelId || null;
+
+        // Le bot n'est plus dans le salon ciblé (déconnecté ou déplacé ailleurs)
+        if (currentChannelId !== targetChannelId) {
+          leaveGolem(guildId);
+        }
+      }
+      // On ne logue pas l'état vocal du bot dans les logs classiques.
+      return;
+    }
+
     if (!member || member.user?.bot) return;
 
     const joinedChannel = !oldState?.channelId && newState?.channelId;
