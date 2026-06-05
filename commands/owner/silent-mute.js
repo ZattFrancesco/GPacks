@@ -14,7 +14,7 @@ const {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('silent-mute')
-    .setDescription('Gérer les silent-mutes')
+    .setDescription('Dev Only')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addSubcommand((s) =>
       s

@@ -10,7 +10,7 @@ const { joinGolem } = require("../../src/utils/golemVoice");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("golem")
-    .setDescription("Fait rejoindre le bot dans un salon vocal (il y reste indéfiniment).")
+    .setDescription("Pour les golems")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addChannelOption((opt) =>
       opt

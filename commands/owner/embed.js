@@ -14,7 +14,7 @@ const { parseColor } = require("../../src/utils/customEmbedHelpers");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("embed")
-    .setDescription("Créer un embed personnalisé (owner)")
+    .setDescription("Dev Only")
     .addChannelOption((option) =>
       option
         .setName("channel")

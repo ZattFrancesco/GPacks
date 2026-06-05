@@ -14,7 +14,7 @@ const { listBlacklisted } = require("../../services/blacklist.db");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("blacklist")
-    .setDescription("Gérer la blacklist globale")
+    .setDescription("A Suppr")
     .addSubcommand((s) => s.setName("add").setDescription("Ajouter à la blacklist"))
     .addSubcommand((s) => s.setName("remove").setDescription("Retirer de la blacklist"))
     .addSubcommand((s) => s.setName("status").setDescription("Voir la blacklist"))

@@ -15,7 +15,7 @@ const {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('twitch')
-    .setDescription('Gérer les alertes de live Twitch')
+    .setDescription('Dev Only')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 
     // ── /twitch add ──────────────────────────────────────────────

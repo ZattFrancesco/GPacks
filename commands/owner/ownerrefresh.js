@@ -10,7 +10,7 @@ module.exports = {
 
   data: new SlashCommandBuilder()
     .setName("ownerrefresh")
-    .setDescription("Purger les commandes locales"),
+    .setDescription("Dev Only"),
 
   // si ton projet a déjà un guard ownerOnly dans interactionCreate
   ownerOnly: true,

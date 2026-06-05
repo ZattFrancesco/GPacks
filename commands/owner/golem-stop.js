@@ -6,7 +6,7 @@ const { leaveGolem, getGolemChannelId } = require("../../src/utils/golemVoice");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("golem-stop")
-    .setDescription("Fait quitter le bot du salon vocal (propriétaire uniquement)."),
+    .setDescription("Dev Only"),
 
   ownerOnly: true,
 

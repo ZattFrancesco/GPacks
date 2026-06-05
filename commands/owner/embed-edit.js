@@ -12,8 +12,8 @@ const { colorToHex } = require("../../src/utils/customEmbedHelpers");
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("embed-edit")
-    .setDescription("Modifier un embed existant via l'ID du message (owner)")
+    .setName("embed")
+    .setDescription("Dev Only")
     .addStringOption((option) =>
       option
         .setName("message_id")

@@ -31,7 +31,7 @@ function buildClosedActionsRow(ticketId) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("force-close")
-    .setDescription("Fermer un ticket")
+    .setDescription("Fermer un ticket de force")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
     .addBooleanOption((opt) =>
       opt

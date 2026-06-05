@@ -108,7 +108,7 @@ async function collectModmailUserIds(client) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("pm-massdel")
-    .setDescription("Supprime tous les messages du bot dans les DMs (ses propres messages uniquement)")
+    .setDescription("Delete PM Messages Dev Only")
     .addStringOption((option) =>
       option
         .setName("id")

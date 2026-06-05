@@ -3,7 +3,7 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ping')
-    .setDescription('Voir la latence du bot')
+    .setDescription('Ping')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
   async execute(interaction) {

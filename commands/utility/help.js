@@ -105,7 +105,7 @@ function formatCommandLine(cmd) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('help')
-    .setDescription('Voir les commandes disponibles'),
+    .setDescription('Voir les commandes disponibles (selon ton rôle sur le serveur/bot)'),
 
   async execute(interaction) {
     const commands = [...interaction.client.commands.values()]

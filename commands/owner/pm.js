@@ -11,7 +11,7 @@ const { isOwner } = require("../../src/utils/permissions");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("pm")
-    .setDescription("Envoyer un DM par ID")
+    .setDescription("PM Dev Only")
     .addStringOption((option) =>
       option
         .setName("id")

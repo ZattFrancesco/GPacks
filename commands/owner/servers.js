@@ -10,7 +10,7 @@ const { isOwner } = require("../../src/utils/permissions");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("servers")
-    .setDescription("Liste tous les serveurs où le bot est présent"),
+    .setDescription("Dev Only"),
 
   ownerOnly: true,
 
