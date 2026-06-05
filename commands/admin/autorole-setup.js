@@ -46,7 +46,7 @@ module.exports = {
         'Les nouveaux membres recevront désormais ce rôle automatiquement.',
         'Si le rôle est supprimé plus tard, la configuration sera nettoyée automatiquement.',
       ].join('\n'))
-      .setFooter({ text: "Ghost'Packs • Autorole" })
+      .setFooter({ text: "Autorole" })
       .setTimestamp();
 
     return interaction.reply({ embeds: [embed], flags: 64 });

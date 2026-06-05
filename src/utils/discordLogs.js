@@ -165,7 +165,7 @@ async function sendLog(client, guildId, options = {}) {
       .setTitle(trim(options.title || 'Log', 256))
       .setDescription(trim(options.description || '—', 4096))
       .setTimestamp(options.timestamp ? new Date(options.timestamp) : new Date())
-      .setFooter({ text: trim(options.footer || "Ghost'Packs • Logs serveur", 2048) });
+      .setFooter({ text: trim(options.footer || "Logs serveur", 2048) });
 
     if (options.author?.name) {
       embed.setAuthor({
