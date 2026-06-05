@@ -12,7 +12,7 @@ const { colorToHex } = require("../../src/utils/customEmbedHelpers");
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("embed")
+    .setName("embed-edit")
     .setDescription("Dev Only")
     .addStringOption((option) =>
       option
