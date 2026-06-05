@@ -48,7 +48,7 @@ function buildDashboardEmbed(guild, cfg, selectedGroupKey) {
         '• Le même message est mis à jour à chaque modification',
       ].join('\n'),
     })
-    .setFooter({ text: "Ghost'Packs • Dashboard logs" })
+    .setFooter({ text: "Dashboard logs" })
     .setTimestamp();
 }
 
@@ -172,7 +172,7 @@ module.exports = {
           inline: true,
         }
       )
-      .setFooter({ text: "Ghost'Packs • Logs serveur" })
+      .setFooter({ text: "Logs serveur" })
       .setTimestamp();
 
     return interaction.reply({ embeds: [embed], flags: 64 });

@@ -112,7 +112,7 @@ module.exports = {
           { name: 'Aperçu du nom', value: `→ **${preview}**`,                      inline: false },
           { name: 'Variables dispo', value: TEMPLATE_VARS,                         inline: false },
         )
-        .setFooter({ text: "Ghost'Packs • Temp Voice" })
+        .setFooter({ text: "Temp Voice" })
         .setTimestamp();
 
       return interaction.editReply({ embeds: [embed] });
@@ -138,7 +138,7 @@ module.exports = {
         .setColor(0xed4245)
         .setTitle('🔇 Hub de vocal temporaire retiré')
         .setDescription(`Le salon ${channel} ne créera plus de vocales temporaires.\n*Les vocales déjà actives ne sont pas supprimées.*`)
-        .setFooter({ text: "Ghost'Packs • Temp Voice" })
+        .setFooter({ text: "Temp Voice" })
         .setTimestamp();
 
       return interaction.editReply({ embeds: [embed] });
@@ -166,7 +166,7 @@ module.exports = {
         .setColor(0x5865f2)
         .setTitle('🔊 Hubs de vocales temporaires')
         .setDescription(lines.join('\n\n'))
-        .setFooter({ text: `Ghost'Packs • Temp Voice — ${configs.length} hub(s)` })
+        .setFooter({ text: `Temp Voice — ${configs.length} hub(s)` })
         .setTimestamp();
 
       return interaction.editReply({ embeds: [embed] });
