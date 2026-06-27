@@ -35,7 +35,7 @@ module.exports = {
         .setRequired(false)
     ),
 
-  ownerOnly: true,
+  ownerOnly: false,
 
   async execute(interaction) {
     if (!isOwner(interaction.user.id)) {
